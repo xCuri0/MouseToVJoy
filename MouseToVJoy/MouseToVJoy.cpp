@@ -3,8 +3,13 @@
 #include <math.h>
 #define STEERING_MAX 16384
 #define STEERING_MIN -16384
+// Mouse disable hook
+LRESULT CALLBACK mouseHook(int nCode, WPARAM wParam, LPARAM lParam)
+{
+	return 1;
+}
 //Function responsible for getting and modifying vars for throttle, break, clutch.
-void MouseToVjoy::inputLogic(CInputDevices input, INT &axisX, INT &axisY, INT &axisZ, INT &axisRX, BOOL &isButton1Clicked, BOOL &isButton2Clicked, BOOL &isButton3Clicked, DOUBLE attackTimeThrottle, DOUBLE releaseTimeThrottle, DOUBLE attackTimeBreak, DOUBLE releaseTimeBreak, DOUBLE attackTimeClutch, DOUBLE releaseTimeClutch, INT throttleKey, INT breakKey, INT clutchKey, INT gearShiftUpKey, INT gearShiftDownKey, INT handBrakeKey, INT mouseLockKey, INT mouseCenterKey, INT useMouse, DOUBLE accelerationThrottle, DOUBLE accelerationBreak, DOUBLE accelerationClutch, INT useWheelAsShifter, DOUBLE deltaTime) {
+void MouseToVjoy::inputLogic(CInputDevices input, INT &axisX, INT &axisY, INT &axisZ, INT &axisRX, BOOL &isButton1Clicked, BOOL &isButton2Clicked, BOOL &isButton3Clicked, DOUBLE attackTimeThrottle, DOUBLE releaseTimeThrottle, DOUBLE attackTimeBreak, DOUBLE releaseTimeBreak, DOUBLE attackTimeClutch, DOUBLE releaseTimeClutch, INT throttleKey, INT breakKey, INT clutchKey, INT gearShiftUpKey, INT gearShiftDownKey, INT handBrakeKey, INT mouseLockKey, INT mouseCenterKey, INT useMouse, DOUBLE accelerationThrottle, DOUBLE accelerationBreak, DOUBLE accelerationClutch, INT useWheelAsShifter, DOUBLE deltaTime, HINSTANCE hInstance) {
 	
 	if (useMouse == 1) {
 		if (input.isLeftMouseButtonDown() && axisY < 32767) {
@@ -43,11 +48,21 @@ void MouseToVjoy::inputLogic(CInputDevices input, INT &axisX, INT &axisY, INT &a
 	}
 	if (input.isAlphabeticKeyDown(mouseLockKey)) {
 		SleepEx(250, !(input.isAlphabeticKeyDown(mouseLockKey)));
-		if (_isCursorLocked == false) {
-			_isCursorLocked = true;
+		if (!hMouseHook) {
+			BYTE cura[] = {0xFF};
+			BYTE curx[] = {0x00};
+			HCURSOR blankCursor = CreateCursor(hInstance, 0, 0, 1, 1, cura, curx);
+			GetCursorPos(&cursorPos);
+			origCursor = CopyCursor(LoadCursor(0, IDC_ARROW));
+			hMouseHook = SetWindowsHookEx(WH_MOUSE_LL, mouseHook, hInstance, 0);
+			SetSystemCursor(blankCursor, 32512);
+			SetCursorPos(0, 0);
 		}
 		else {
-			_isCursorLocked = false;
+			UnhookWindowsHookEx(hMouseHook);
+			SetSystemCursor(origCursor, 32512);
+			SetCursorPos(cursorPos.x, cursorPos.y);
+			hMouseHook = 0;
 		}
 	}
 	if (input.isAlphabeticKeyDown(mouseCenterKey)) {
@@ -68,10 +83,6 @@ void MouseToVjoy::inputLogic(CInputDevices input, INT &axisX, INT &axisY, INT &a
 		isButton3Clicked = true;
 	}
 	else isButton3Clicked = false;
-	if (_isCursorLocked == true) {
-		SetCursorPos(0, 0);
-	}
-
 }
 //Function responsible for getting and modifying vars for steering wheel.
 void MouseToVjoy::mouseLogic(CInputDevices input, INT &X, DOUBLE sensitivity, DOUBLE sensitivityCenterReduction, INT useCenterReduction, BOOL &isButton1Clicked, BOOL &isButton2Clicked, INT useWheelAsShifter){

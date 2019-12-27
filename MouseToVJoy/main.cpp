@@ -90,7 +90,7 @@ void updateCode() {
 		axisX = axisX + ffbStrength;
 		ffbStrength = 0;
 	}
-	mTV.inputLogic(rInput, axisX, axisY, axisZ, axisRX, isButton1Clicked, isButton2Clicked, isButton3Clicked, fR.result(1), fR.result(2), fR.result(3), fR.result(4), fR.result(5), fR.result(6), (int)fR.result(7), (int)fR.result(8), (int)fR.result(9), (int)fR.result(10), (int)fR.result(11), (int)fR.result(12), (int)fR.result(13), (int)fR.result(14), (int)fR.result(15), fR.result(17), fR.result(18), fR.result(19), (int)fR.result(22), sw.elapsedMilliseconds());
+	mTV.inputLogic(rInput, axisX, axisY, axisZ, axisRX, isButton1Clicked, isButton2Clicked, isButton3Clicked, fR.result(1), fR.result(2), fR.result(3), fR.result(4), fR.result(5), fR.result(6), (int)fR.result(7), (int)fR.result(8), (int)fR.result(9), (int)fR.result(10), (int)fR.result(11), (int)fR.result(12), (int)fR.result(13), (int)fR.result(14), (int)fR.result(15), fR.result(17), fR.result(18), fR.result(19), (int)fR.result(22), sw.elapsedMilliseconds(), wc.hInstance);
 	vJ.feedDevice(1, axisX, axisY, axisZ, axisRX, isButton1Clicked, isButton2Clicked, isButton3Clicked);
 	isButton1Clicked = false;
 	isButton2Clicked = false;
