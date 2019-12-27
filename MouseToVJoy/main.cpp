@@ -72,9 +72,9 @@ void initializationCode() {
 	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 }
 //Code that is run every time program gets an message from enviroment(mouse movement, mouse click etc.), manages input logic and feeding device.
-//Update code is sleeping for 2 miliseconds to make is less cpu demanding
+//Update code is sleeping for 1 miliseconds to make is less cpu demanding
 void updateCode() {
-	Sleep(20);
+	Sleep(10);
 	if (fFB.getFfbSize().getEffectType() == "Constant") {
 		if (fFB.getFfbSize().getDirection() > 100) {
 			ffbStrength = (int)((fFB.getFfbSize().getMagnitude())*(sw.elapsedMilliseconds()*0.001));
@@ -168,7 +168,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			TranslateMessage(&msgWindow);
 			DispatchMessage(&msgWindow);
 		}
-		//To optimalize cpu usade wait 2 milisecond before running update code.
+		//To optimalize cpu usade wait 1 milisecond before running update code.
 		updateCode();
 		//If Message is equal to quit or destroy, break loop and end program.
 		if (msgWindow.message == WM_QUIT || msgWindow.message == WM_DESTROY)
