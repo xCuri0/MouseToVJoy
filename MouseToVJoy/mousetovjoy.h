@@ -13,12 +13,12 @@ public:
 	//Function responsible for getting and modifying vars for steering wheel.
 	void MouseToVjoy::mouseLogic(CInputDevices input, INT &axisX, DOUBLE sensitivity, DOUBLE sensitivityCenterReduction, INT useCenterReduction, BOOL &isButton1Clicked, BOOL &isButton2Clicked, INT useWheelAsShifter);
 private:
+	//Gets if the Cursor is locked then, sets cursor in cords 0,0 every input.
+	bool _isCursorLocked;
 	//**Gets if the Center Reduction is used, when used function mouselogic() uses linear algorithm to calculate sensitivity, the more the joystick is centered the sloweer the sensitivity(max 1.0 of the sensitivity.), the further the faster the sensitivity(max = CenterReduction value * Sensitivity )
 	//bool _useCenterReduction;
 	//define center multiplier to be able to modify it during function.
 	DOUBLE _centerMultiplier;
-	//Mouse hook
-	HHOOK hMouseHook;
 	//Original cursor
 	HCURSOR origCursor;
 	//Original cursor position
