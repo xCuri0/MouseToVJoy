@@ -238,14 +238,6 @@ int ForceFeedBack::twosCompWord2Int(WORD in)
 // Convert Ffb Calls into FFBSIZE struct
 void CALLBACK ForceFeedBack::ffbToVJoy(PVOID data, PVOID userData)
 {
-	/////// Packet Device ID, and Type Block Index (if exists)
-#pragma region Packet Device ID, and Type Block Index
-	int DeviceID, BlockIndex;
-	FFBPType	Type;
-	TCHAR	TypeStr[100];
-#pragma endregion
-
-
 	/////// Effect Report
 #pragma region Effect Report
 #pragma warning( push )

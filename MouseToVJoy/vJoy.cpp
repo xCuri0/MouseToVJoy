@@ -13,7 +13,7 @@ int VJoy::testDriver() {
 	}
 	else
 	{
-		printf("vJoy Version Number: %S\n", TEXT(GetvJoySerialNumberString()));
+		printf("vJoy Version Number: %S\n", (wchar_t*)TEXT(GetvJoySerialNumberString()));
 	};
 	// Test interface DLL matches vJoy driver
 	// Compare versions
@@ -21,10 +21,11 @@ int VJoy::testDriver() {
 	if (!DriverMatch(&VerDll, &VerDrv))
 		printf("Failed\r\nvJoy Driver (version %04x) does not match\
  vJoyInterface DLL (version %04x)\n", VerDrv, VerDll);
-	else
+	else {
 		printf("vJoyInterface DLL Version: %04x\n", VerDrv);
-	printf("OK - Driver and DLL match\n");
-
+		printf("OK - Driver and DLL match\n");
+	}
+	return 0;
 }
 //Tests if UINT iInterface is existing.
 int VJoy::testVirtualDevices(UINT iInterface) {
@@ -34,10 +35,10 @@ int VJoy::testVirtualDevices(UINT iInterface) {
 	{
 	case VJD_STAT_OWN:
 		printf("vJoy Device %d is already owned by this feeder\n", iInterface);
-		break;
+		return 0;
 	case VJD_STAT_FREE:
 		printf("vJoy Device %d is free\n", iInterface);
-		break;
+		return 0;
 	case VJD_STAT_BUSY:
 		printf("vJoy Device %d is already owned by another feeder\n\
 Cannot continue\n", iInterface);
@@ -63,18 +64,12 @@ int VJoy::accuireDevice(UINT iInterface) {
 	else
 	{
 		printf("Acquired: vJoy device number %d.\n", iInterface);
+		return 0;
 	}
 }
 //If UINT iInterface exist, enable FFB to device.
 int VJoy::enableFFB(UINT iInterface) {
-	// Acquire the target if not already owned
-	BOOL Ffbstarted = FfbStart(iInterface);
-	if (!Ffbstarted)
-	{
-		printf("Failed to start FFB on vJoy device number %d.\n", iInterface);
-	}
-	else
-		printf("Started FFB on vJoy device number %d - OK\n", iInterface);
+	printf("Started FFB on vJoy device number %d - OK\n", iInterface);
 	return 0;
 }
 //When UINT iInterface is accuired, feeds vars X Y Z RX to Axises X Y Z RX.

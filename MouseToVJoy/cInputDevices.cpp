@@ -126,24 +126,5 @@ bool CInputDevices::checkKeyPress(bool isLastKeyState, bool isThisKeyState)
 	// The following may be overkill, but just know the value returned
 	// is based upon the current state of the boolean in question, and the
 	// new state we have processed.
-	if (isThisKeyState == false)
-	{
-		if (isLastKeyState == true)
-		{
-			return true;
-		}
-		else
-		{
-			return true;
-		}
-	}
-	else if (isThisKeyState == true)
-	{
-		if (isLastKeyState == false)
-		{
-			return false;
-		}
-		else
-			return false;
-	}
+	return !isThisKeyState;
 }
