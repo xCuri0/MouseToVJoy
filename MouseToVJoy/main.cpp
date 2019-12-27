@@ -69,6 +69,7 @@ void initializationCode() {
 	printf("Acceleration Clutch = %.2f \n", fR.result(19));
 	printf("Center Multiplier = %.2f \n", fR.result(20));
 	printf("==================================\n");
+	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 }
 //Code that is run every time program gets an message from enviroment(mouse movement, mouse click etc.), manages input logic and feeding device.
 //Update code is sleeping for 2 miliseconds to make is less cpu demanding
