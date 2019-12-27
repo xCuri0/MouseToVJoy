@@ -8,38 +8,38 @@ void MouseToVjoy::inputLogic(CInputDevices input, INT &axisX, INT &axisY, INT &a
 	
 	if (useMouse == 1) {
 		if (input.isLeftMouseButtonDown() && axisY < 32767) {
-			axisY = (axisY + (attackTimeThrottle*deltaTime)) * accelerationThrottle;
+			axisY = (int)((axisY + (attackTimeThrottle*deltaTime)) * accelerationThrottle);
 		}
 		if (!input.isLeftMouseButtonDown() && axisY > 1) {
-			axisY = (axisY - (releaseTimeThrottle*deltaTime)) / accelerationThrottle;;
+			axisY = (int)((axisY - (releaseTimeThrottle*deltaTime)) / accelerationThrottle);
 		}
 		if (input.isRightMouseButtonDown() && axisZ < 32767) {
-			axisZ = (axisZ + (attackTimeBreak*deltaTime)) * accelerationBreak;
+			axisZ = (int)((axisZ + (attackTimeBreak*deltaTime)) * accelerationBreak);
 		}
 		if (!input.isRightMouseButtonDown() && axisZ > 1) {
-			axisZ = (axisZ - (releaseTimeBreak*deltaTime)) / accelerationBreak;
+			axisZ = (int)((axisZ - (releaseTimeBreak*deltaTime)) / accelerationBreak);
 		}
 	}
 	else {
 		if (input.isAlphabeticKeyDown(throttleKey) && axisY < 32767) {
-			axisY = (axisY + (attackTimeThrottle*deltaTime)) * accelerationThrottle;
+			axisY = (int)((axisY + (attackTimeThrottle*deltaTime)) * accelerationThrottle);
 		}
 		if (!input.isAlphabeticKeyDown(throttleKey) && axisY > 1) {
-			axisY = (axisY - (releaseTimeThrottle*deltaTime)) / accelerationThrottle;
+			axisY = (int)((axisY - (releaseTimeThrottle*deltaTime)) / accelerationThrottle);
 		}
 		if (input.isAlphabeticKeyDown(breakKey) && axisZ < 32767) {
-			axisZ = (axisZ + (attackTimeBreak*deltaTime)) * accelerationBreak;
+			axisZ = (int)((axisZ + (attackTimeBreak*deltaTime)) * accelerationBreak);
 		}
 		if (!input.isAlphabeticKeyDown(breakKey) && axisZ > 1) {
-			axisZ = (axisZ - (releaseTimeBreak*deltaTime)) / accelerationBreak;
+			axisZ = (int)((axisZ - (releaseTimeBreak*deltaTime)) / accelerationBreak);
 		}
 	}
 
 	if (input.isAlphabeticKeyDown(clutchKey) && axisRX < 32767) {
-		axisRX = (axisRX + (attackTimeClutch*deltaTime)) * accelerationClutch;
+		axisRX = (int)((axisRX + (attackTimeClutch*deltaTime)) * accelerationClutch);
 	}
 	if (!input.isAlphabeticKeyDown(clutchKey) && axisRX > 1) {
-		axisRX = (axisRX - (releaseTimeClutch*deltaTime)) / accelerationClutch;
+		axisRX = (int)((axisRX - (releaseTimeClutch*deltaTime)) / accelerationClutch);
 	}
 	if (input.isAlphabeticKeyDown(mouseLockKey)) {
 		SleepEx(250, !(input.isAlphabeticKeyDown(mouseLockKey)));
@@ -84,10 +84,10 @@ void MouseToVjoy::mouseLogic(CInputDevices input, INT &X, DOUBLE sensitivity, DO
 		_centerMultiplier = pow(sensitivityCenterReduction, (1 - (double)((double)X / (double)STEERING_MIN)));
 	}
 	if (useCenterReduction == 1) {
-		X = X + ((input.getMouseChangeX() * sensitivity) / _centerMultiplier);
+		X = (int)(X + ((input.getMouseChangeX() * sensitivity) / _centerMultiplier));
 	}
 	else {
-		X = X + (input.getMouseChangeX() * sensitivity);
+		X = (int)(X + (input.getMouseChangeX() * sensitivity));
 	}
 
 	if (X > 16384) {

@@ -76,20 +76,20 @@ void updateCode() {
 	Sleep(20);
 	if (fFB.getFfbSize().getEffectType() == "Constant") {
 		if (fFB.getFfbSize().getDirection() > 100) {
-			ffbStrength = (fFB.getFfbSize().getMagnitude())*(sw.elapsedMilliseconds()*0.001);
+			ffbStrength = (int)((fFB.getFfbSize().getMagnitude())*(sw.elapsedMilliseconds()*0.001));
 		}		
 		else {
-			ffbStrength = -(fFB.getFfbSize().getMagnitude())*(sw.elapsedMilliseconds()*0.001);
+			ffbStrength = (int)(-(fFB.getFfbSize().getMagnitude())*(sw.elapsedMilliseconds()*0.001));
 		}
 	}
 	if (fFB.getFfbSize().getEffectType() == "Period") {
-		ffbStrength = (fFB.getFfbSize().getOffset()*0.5)*(sw.elapsedMilliseconds()*0.001);
+		ffbStrength = (int)((fFB.getFfbSize().getOffset()*0.5)*(sw.elapsedMilliseconds()*0.001));
 	}
 	if (fR.result(21) == 1) {
 		axisX = axisX + ffbStrength;
 		ffbStrength = 0;
 	}
-	mTV.inputLogic(rInput, axisX, axisY, axisZ, axisRX, isButton1Clicked, isButton2Clicked, isButton3Clicked, fR.result(1), fR.result(2), fR.result(3), fR.result(4), fR.result(5), fR.result(6), fR.result(7), fR.result(8), fR.result(9), fR.result(10), fR.result(11), fR.result(12), fR.result(13), fR.result(14), fR.result(15), fR.result(17), fR.result(18), fR.result(19), fR.result(22), sw.elapsedMilliseconds());
+	mTV.inputLogic(rInput, axisX, axisY, axisZ, axisRX, isButton1Clicked, isButton2Clicked, isButton3Clicked, fR.result(1), fR.result(2), fR.result(3), fR.result(4), fR.result(5), fR.result(6), (int)fR.result(7), (int)fR.result(8), (int)fR.result(9), (int)fR.result(10), (int)fR.result(11), (int)fR.result(12), (int)fR.result(13), (int)fR.result(14), (int)fR.result(15), fR.result(17), fR.result(18), fR.result(19), (int)fR.result(22), sw.elapsedMilliseconds());
 	vJ.feedDevice(1, axisX, axisY, axisZ, axisRX, isButton1Clicked, isButton2Clicked, isButton3Clicked);
 	isButton1Clicked = false;
 	isButton2Clicked = false;
@@ -120,7 +120,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 			rInput.getData(lParam);
 			if (rInput.isMouseWheelUp())isButton1Clicked = true;
 			if (rInput.isMouseWheelDown())isButton2Clicked = true;
-			mTV.mouseLogic(rInput, axisX, fR.result(0), fR.result(20), fR.result(16), isButton1Clicked, isButton2Clicked, fR.result(22));
+			mTV.mouseLogic(rInput, axisX, fR.result(0), fR.result(20), (int)fR.result(16), isButton1Clicked, isButton2Clicked, (int)fR.result(22));
 		break;
 	case WM_CLOSE:
 		PostQuitMessage(0);
@@ -131,7 +131,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 	}
 	return 0;
 }
-//Main function
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
 	//invisible window initialization to be able to recive raw input even if the window is not focused.
@@ -147,6 +147,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	string cmdLine = lpCmdLine;
 	if (cmdLine != "-noconsole") {
 		AllocConsole();
+		#pragma warning(disable:4996)
 		freopen("CONOUT$", "w", stdout);
 		freopen("CONIN$", "r", stdin);
 		ios::sync_with_stdio();
