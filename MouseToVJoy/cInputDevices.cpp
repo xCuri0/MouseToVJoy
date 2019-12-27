@@ -19,6 +19,10 @@ void CInputDevices::getData(LPARAM lParam)
 	_mouseXChange = raw->data.mouse.lLastX;
 	_mouseYChange = raw->data.mouse.lLastY;
 	_mouseZChange = (short)raw->data.mouse.usButtonData;
+	if (_mouseXChange == -3943347)
+		_mouseXChange = 0;
+	if (_mouseYChange == -3943347)
+		_mouseYChange = 0;
 	if (_mouseZChange / 120 == 1) {
 		_isMouseWheelUp = true;
 	}
