@@ -19,23 +19,24 @@ void CInputDevices::getData(LPARAM lParam)
 	_mouseXChange = raw->data.mouse.lLastX;
 	_mouseYChange = raw->data.mouse.lLastY;
 	_mouseZChange = (short)raw->data.mouse.usButtonData;
+	// Filter jumps that are caused for some reason
 	if (_mouseXChange == -3943347)
 		_mouseXChange = 0;
 	if (_mouseYChange == -3943347)
 		_mouseYChange = 0;
-	if (_mouseZChange / 120 == 1) {
+
+	if (_mouseZChange / 120 == 1)
 		_isMouseWheelUp = true;
-	}
-	else { _isMouseWheelUp = false; };
-	if (_mouseZChange / -120 == 1) {
+	else
+		_isMouseWheelUp = false;
+
+	if (_mouseZChange / -120 == 1)
 		_isMouseWheelDown = true;
-	}
-	else { _isMouseWheelDown = false; };
+	else
+		_isMouseWheelDown = false;
 
 	if (raw->header.dwType == RIM_TYPEMOUSE)
 	{
-		
-
 		// Get values from the mouse member (of type RAWMOUSE)
 		bool bStateDown = raw->data.mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_DOWN;
 		bool bStateUp = raw->data.mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_UP;
@@ -59,7 +60,6 @@ void CInputDevices::getData(LPARAM lParam)
 		{
 			_isRightMouseButtonPressed = true;
 			_isKeyboardButtonPressed[0x02] = true;
-
 		}
 
 		if (bStateUpTwo == true)
@@ -112,9 +112,7 @@ void CInputDevices::getData(LPARAM lParam)
 
 		if (pbToKey != NULL)
 		{
-
 			*pbToKey = checkKeyPress(*pbToKey, keyUp);
-
 			// Be sure to return ASAP!
 			return;
 		}

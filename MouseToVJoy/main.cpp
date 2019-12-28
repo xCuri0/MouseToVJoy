@@ -76,16 +76,13 @@ void initializationCode() {
 void updateCode() {
 	Sleep(10);
 	if (fFB.getFfbSize().getEffectType() == "Constant") {
-		if (fFB.getFfbSize().getDirection() > 100) {
+		if (fFB.getFfbSize().getDirection() > 100)
 			ffbStrength = (int)((fFB.getFfbSize().getMagnitude())*(sw.elapsedMilliseconds()*0.001));
-		}		
-		else {
+		else
 			ffbStrength = (int)(-(fFB.getFfbSize().getMagnitude())*(sw.elapsedMilliseconds()*0.001));
-		}
 	}
-	if (fFB.getFfbSize().getEffectType() == "Period") {
+	if (fFB.getFfbSize().getEffectType() == "Period")
 		ffbStrength = (int)((fFB.getFfbSize().getOffset()*0.5)*(sw.elapsedMilliseconds()*0.001));
-	}
 	if (fR.result(21) == 1) {
 		axisX = axisX + ffbStrength;
 		ffbStrength = 0;
@@ -141,9 +138,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	wc.lpfnWndProc = WndProc;        // function which will handle messages
 	wc.hInstance = hInstance;
 	wc.lpszClassName = class_name;
-	if (RegisterClassEx(&wc)) {
+	if (RegisterClassEx(&wc))
 		CreateWindowEx(0, class_name, "dummy_name", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, NULL, NULL);
-	}
+
 	//Allocating console to process and redirect every stdout, stdin to it.
 	string cmdLine = lpCmdLine;
 	if (cmdLine != "-noconsole") {
@@ -172,9 +169,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		updateCode();
 		//If Message is equal to quit or destroy, break loop and end program.
 		if (msgWindow.message == WM_QUIT || msgWindow.message == WM_DESTROY)
-		{
 			break;
-		}
 	}
 		
 }
