@@ -4,7 +4,9 @@
 Simple application that converts mouse/keyboard input to vjoy output, created using vjoyinferace and winapi32.
 
 ![](header.PNG)
+## Download
 
+Download from releases on GitHub https://github.com/xCuri0/MouseToVJoy/releases
 ## Installation
 
 Windows:
