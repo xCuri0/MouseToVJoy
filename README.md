@@ -19,6 +19,14 @@ Useful for racing games, created especially for Assetto Corsa to remove traction
 Some games I tested it with: Assetto Corsa, Live For Speed, Rfactor.
 
 ## Release History
+* 1.8
+	* ADD: 1000hz polling.
+	* ADD: Set high priority.
+	* ADD: Filter Assetto Corsa keyboard shortcuts.
+	* ADD: Improved mouse locking.
+	* ADD: Allow acceleration to be fully disabled.
+	* ADD: Updated vJoy.
+	* FIX: Cleaned source code.
 * 1.7
     * ADD: Support for 'ForceFeedback' on Assetto Corsa.
     * ADD: `Use Wheel as Shifter`.

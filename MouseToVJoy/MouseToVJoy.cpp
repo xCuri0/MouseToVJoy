@@ -8,13 +8,13 @@ void MouseToVjoy::inputLogic(CInputDevices input, INT &axisX, INT &axisY, INT &a
 	
 	if (useMouse == 1) {
 		if (input.isLeftMouseButtonDown() && axisY < 32767)
-			axisY = (int)((axisY + (attackTimeThrottle*deltaTime)) * accelerationThrottle);
+			axisY = (int)((axisY + (attackTimeThrottle == 0 ? 32767 : (attackTimeThrottle*deltaTime))) * accelerationThrottle);
 		if (!input.isLeftMouseButtonDown() && axisY > 1)
-			axisY = (int)((axisY - (releaseTimeThrottle*deltaTime)) / accelerationThrottle);
+			axisY = (int)((axisY - (releaseTimeThrottle == 0 ? 32767 : (releaseTimeThrottle*deltaTime))) / accelerationThrottle);
 		if (input.isRightMouseButtonDown() && axisZ < 32767)
-			axisZ = (int)((axisZ + (attackTimeBreak*deltaTime)) * accelerationBreak);
+			axisZ = (int)((axisZ + (attackTimeBreak == 0 ? 32767 : (attackTimeBreak*deltaTime))) * accelerationBreak);
 		if (!input.isRightMouseButtonDown() && axisZ > 1)
-			axisZ = (int)((axisZ - (releaseTimeBreak*deltaTime)) / accelerationBreak);
+			axisZ = (int)((axisZ - (releaseTimeBreak == 0 ? 32767 : (releaseTimeBreak*deltaTime))) / accelerationBreak);
 	}
 	else {
 		if (input.isAlphabeticKeyDown(throttleKey) && axisY < 32767)
