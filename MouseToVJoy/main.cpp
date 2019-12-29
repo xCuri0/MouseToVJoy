@@ -26,9 +26,36 @@ FileRead fR;//Class used for reading and writing to config.txt file.
 ForceFeedBack fFB;//Used to recive and interpret ForceFeedback calls from game window.
 Stopwatch sw;//Measuring time in nanoseconds
 INT axisX, axisY, axisZ, axisRX, ffbStrength; //Local variables that stores all axis values and forcefeedback strength we need.
-BOOL isButton1Clicked, isButton2Clicked, isButton3Clicked; //Bools that stores information if button was pressed.
+BOOL isButton1Clicked, isButton2Clicked, isButton3Clicked, ctrlDown; //Bools that stores information if button was pressed.
 void CALLBACK FFBCALLBACK(PVOID data, PVOID userData) {//Creating local callback which just executes callback from ForceFeedBack class.
 	fFB.ffbToVJoy(data, userData);
+}
+LRESULT CALLBACK keyboardHook(int nCode, WPARAM wParam, LPARAM lParam) {
+	switch (wParam)
+	{
+	case WM_KEYDOWN:
+	case WM_SYSKEYDOWN:
+	case WM_KEYUP:
+	case WM_SYSKEYUP:
+		PKBDLLHOOKSTRUCT p = (PKBDLLHOOKSTRUCT)(lParam);
+		USHORT vkCode = MapVirtualKey(p->scanCode, MAPVK_VSC_TO_VK);
+
+		if (vkCode == 17 && p->dwExtraInfo != 6969) {
+			if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN)
+				ctrlDown = true;
+			else if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP)
+				ctrlDown = false;
+			break;
+		}
+		for (int i = 7; i <= 14; i++)
+			if ((int)fR.result(i) == vkCode && (int)fR.result(i) != 17 && (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) && ctrlDown) {
+				// Set the CTRL key to up and set dwExtraInfo to le funni number so we can ignore it
+				keybd_event(17, 0, KEYEVENTF_KEYUP, 6969);
+				break;
+			}
+		break;
+	}
+	return CallNextHookEx(NULL, nCode, wParam, lParam);
 }
 //Code that is run once application is initialized, test virtual joystick and accuires it, also it reads config.txt file and prints out menu and variables.
 void initializationCode() {
@@ -43,6 +70,12 @@ void initializationCode() {
 	//what strings to look for in config file.
 	string checkArray[23] = { "Sensitivity", "AttackTimeThrottle", "ReleaseTimeThrottle", "AttackTimeBreak", "ReleaseTimeBreak", "AttackTimeClutch", "ReleaseTimeClutch", "ThrottleKey", "BreakKey", "ClutchKey", "GearShiftUpKey", "GearShiftDownKey", "HandBrakeKey", "MouseLockKey", "MouseCenterKey", "UseMouse","UseCenterReduction" , "AccelerationThrottle", "AccelerationBreak", "AccelerationClutch", "CenterMultiplier", "UseForceFeedback", "UseWheelAsShifter" };
 	fR.newFile(configFileName, checkArray);//read configFileName and look for checkArray
+	for (int i = 7; i <= 14; i++)
+		if ((int)fR.result(i) == 17) {
+			printf("Using global keyboard hook to disable Assetto Corsa keyboard shortcuts\n");
+			SetWindowsHookEx(WH_KEYBOARD_LL, keyboardHook, wc.hInstance, 0);
+			break;
+		}
 	//Printing basic menu with assigned values
 	printf("==================================\n");
 	printf("Sensitivity = %.2f \n", fR.result(0));

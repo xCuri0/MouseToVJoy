@@ -19,10 +19,10 @@ void CInputDevices::getData(LPARAM lParam)
 	_mouseXChange = raw->data.mouse.lLastX;
 	_mouseYChange = raw->data.mouse.lLastY;
 	_mouseZChange = (short)raw->data.mouse.usButtonData;
-	// Filter jumps that are caused for some reason
-	if (_mouseXChange == -3943347)
+	// Filter jumps that are caused by le funni number. why does this even happen ?
+	if (_mouseXChange == 6969)
 		_mouseXChange = 0;
-	if (_mouseYChange == -3943347)
+	if (_mouseYChange == 6969)
 		_mouseYChange = 0;
 
 	if (_mouseZChange / 120 == 1)
@@ -110,7 +110,7 @@ void CInputDevices::getData(LPARAM lParam)
 			}
 		}
 
-		if (pbToKey != NULL)
+		if (pbToKey != NULL && raw->data.keyboard.ExtraInformation != 6969) // Check if ExtraInformation matches le funni number and ignore if it does
 		{
 			*pbToKey = checkKeyPress(*pbToKey, keyUp);
 			// Be sure to return ASAP!
