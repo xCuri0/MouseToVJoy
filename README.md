@@ -21,6 +21,9 @@ Useful for racing games, created especially for Assetto Corsa to remove traction
 Some games I tested it with: Assetto Corsa, Live For Speed, Rfactor.
 
 ## Release History
+* 1.81
+	* FIX: Buggy mouse lock key.
+	* FIX: Cursor not restored on exit.
 * 1.8
 	* ADD: 1000hz polling.
 	* ADD: Set high priority.

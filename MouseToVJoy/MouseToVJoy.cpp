@@ -37,12 +37,13 @@ void MouseToVjoy::inputLogic(CInputDevices input, INT &axisX, INT &axisY, INT &a
 			BYTE cura[] = { 0xFF };
 			BYTE curx[] = { 0x00 };
 			HCURSOR blankCursor = CreateCursor(hInstance, 0, 0, 1, 1, cura, curx);
-			GetCursorPos(&cursorPos);
 			origCursor = CopyCursor(LoadCursor(0, IDC_ARROW));
+			GetCursorPos(&cursorPos);
 			SetSystemCursor(blankCursor, 32512);
+			DestroyCursor(blankCursor);
 			_isCursorLocked = true;
 		}
-		else if (!lastDown || hInstance == NULL) {
+		else if ((!lastDown || hInstance == NULL) && _isCursorLocked) {
 			SetSystemCursor(origCursor, 32512);
 			SetCursorPos(cursorPos.x, cursorPos.y);
 			_isCursorLocked = false;
