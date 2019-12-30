@@ -31,24 +31,26 @@ void MouseToVjoy::inputLogic(CInputDevices input, INT &axisX, INT &axisY, INT &a
 		axisRX = (int)((axisRX + (attackTimeClutch == 0 ? 32767 : (attackTimeClutch*deltaTime))) * accelerationClutch);
 	if (!input.isAlphabeticKeyDown(clutchKey) && axisRX > 1)
 		axisRX = (int)((axisRX - (releaseTimeClutch == 0 ? 32767 : (releaseTimeClutch*deltaTime))) / accelerationClutch);
-	if (input.isAlphabeticKeyDown(mouseLockKey)) {
-		SleepEx(250, !(input.isAlphabeticKeyDown(mouseLockKey)));
-		if (!_isCursorLocked) {
+	if (input.isAlphabeticKeyDown(mouseLockKey) || hInstance == NULL) {
+		if (!_isCursorLocked && !lastDown && hInstance != NULL) {
 			// Set cursor to blank but first save the current one so we can restore it.
-			BYTE cura[] = {0xFF};
-			BYTE curx[] = {0x00};
+			BYTE cura[] = { 0xFF };
+			BYTE curx[] = { 0x00 };
 			HCURSOR blankCursor = CreateCursor(hInstance, 0, 0, 1, 1, cura, curx);
 			GetCursorPos(&cursorPos);
 			origCursor = CopyCursor(LoadCursor(0, IDC_ARROW));
 			SetSystemCursor(blankCursor, 32512);
 			_isCursorLocked = true;
 		}
-		else {
+		else if (!lastDown || hInstance == NULL) {
 			SetSystemCursor(origCursor, 32512);
 			SetCursorPos(cursorPos.x, cursorPos.y);
 			_isCursorLocked = false;
 		}
+		lastDown = true;
 	}
+	else
+		lastDown = false;
 	if (input.isAlphabeticKeyDown(mouseCenterKey)) {
 		SleepEx(250, !(input.isAlphabeticKeyDown(mouseCenterKey)));
 		axisX = (32766 / 2);

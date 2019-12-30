@@ -57,6 +57,13 @@ LRESULT CALLBACK keyboardHook(int nCode, WPARAM wParam, LPARAM lParam) {
 	}
 	return CallNextHookEx(NULL, nCode, wParam, lParam);
 }
+BOOL exitHandler(DWORD event) {
+	if (event == CTRL_CLOSE_EVENT) {
+		mTV.inputLogic(rInput, axisX, axisY, axisZ, axisRX, isButton1Clicked, isButton2Clicked, isButton3Clicked, fR.result(1), fR.result(2), fR.result(3), fR.result(4), fR.result(5), fR.result(6), (int)fR.result(7), (int)fR.result(8), (int)fR.result(9), (int)fR.result(10), (int)fR.result(11), (int)fR.result(12), (int)fR.result(13), (int)fR.result(14), (int)fR.result(15), fR.result(17), fR.result(18), fR.result(19), (int)fR.result(22), sw.elapsedMilliseconds(), NULL);
+		return true;
+	}
+	return false;
+}
 //Code that is run once application is initialized, test virtual joystick and accuires it, also it reads config.txt file and prints out menu and variables.
 void initializationCode() {
 	//Code that is run only once, tests vjoy device, reads config file and prints basic out accuired vars.
@@ -66,6 +73,7 @@ void initializationCode() {
 	vJ.accuireDevice(DEV_ID);//Accuire virtual joystick of index number DEV_ID
 	vJ.enableFFB(DEV_ID);//Enable virtual joystick of index number DEV_ID to accept forcefeedback calls
 	FfbRegisterGenCB(FFBCALLBACK, &DEV_ID);//Registed what function to run on forcefeedback call.
+	SetConsoleCtrlHandler((PHANDLER_ROUTINE)(exitHandler), TRUE);//Set the exit handler
 	string configFileName = "config.txt";
 	//what strings to look for in config file.
 	string checkArray[23] = { "Sensitivity", "AttackTimeThrottle", "ReleaseTimeThrottle", "AttackTimeBreak", "ReleaseTimeBreak", "AttackTimeClutch", "ReleaseTimeClutch", "ThrottleKey", "BreakKey", "ClutchKey", "GearShiftUpKey", "GearShiftDownKey", "HandBrakeKey", "MouseLockKey", "MouseCenterKey", "UseMouse","UseCenterReduction" , "AccelerationThrottle", "AccelerationBreak", "AccelerationClutch", "CenterMultiplier", "UseForceFeedback", "UseWheelAsShifter" };
@@ -110,12 +118,12 @@ void updateCode() {
 	Sleep(10);
 	if (fFB.getFfbSize().getEffectType() == "Constant") {
 		if (fFB.getFfbSize().getDirection() > 100)
-			ffbStrength = (int)((fFB.getFfbSize().getMagnitude())*(sw.elapsedMilliseconds()*0.001));
+			ffbStrength = (int)((fFB.getFfbSize().getMagnitude()) * (sw.elapsedMilliseconds() * 0.001));
 		else
-			ffbStrength = (int)(-(fFB.getFfbSize().getMagnitude())*(sw.elapsedMilliseconds()*0.001));
+			ffbStrength = (int)(-(fFB.getFfbSize().getMagnitude()) * (sw.elapsedMilliseconds() * 0.001));
 	}
 	if (fFB.getFfbSize().getEffectType() == "Period")
-		ffbStrength = (int)((fFB.getFfbSize().getOffset()*0.5)*(sw.elapsedMilliseconds()*0.001));
+		ffbStrength = (int)((fFB.getFfbSize().getOffset() * 0.5) * (sw.elapsedMilliseconds() * 0.001));
 	if (fR.result(21) == 1) {
 		axisX = axisX + ffbStrength;
 		ffbStrength = 0;
