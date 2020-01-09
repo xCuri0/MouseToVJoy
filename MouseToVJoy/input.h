@@ -54,6 +54,11 @@ public:
 	int            mouseX;
 	int            mouseY;
 
+	// Notice how I use an array of bools rather than having a separate bool for each.
+	// In the source file you will see how my enumerations come into play for knowing what index
+	// to access.
+	bool           _isKeyboardButtonPressed[166];
+
 	// Alphabetic as in any letter from the Alphabet. So IsAlphabeticKeyDown returns
 	// a value of true or false from an array of 25 booleans. Each index is associated
 	// with a position in the english alphabet. Use one of the enumerated values
@@ -84,11 +89,6 @@ private:
 	bool           _isRightMouseButtonPressed;
 	bool           _isMouseWheelUp;
 	bool           _isMouseWheelDown;
-
-	// Notice how I use an array of bools rather than having a separate bool for each.
-	// In the source file you will see how my enumerations come into play for knowing what index
-	// to access.
-	bool           _isKeyboardButtonPressed[166];
 
 	// The CheckKeyPress function is because of these issues:
 
