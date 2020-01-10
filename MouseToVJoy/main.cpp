@@ -25,8 +25,8 @@ CInputDevices rInput;//Class that helps with determining what key was pressed.
 FileRead fR;//Class used for reading and writing to config.txt file.
 ForceFeedBack fFB;//Used to recive and interpret ForceFeedback calls from game window.
 Stopwatch sw;//Measuring time in nanoseconds
-INT axisX, axisY, axisZ, axisRX, ffbStrength; //Local variables that stores all axis values and forcefeedback strength we need.
-BOOL isButton1Clicked, isButton2Clicked, isButton3Clicked, ctrlDown; //Bools that stores information if button was pressed.
+INT axisX, axisY, axisZ, axisRX, gear, pgear, ffbStrength; //Local variables that stores all axis values and forcefeedback strength we need.
+BOOL isButton1Clicked, isButton2Clicked, isButton3Clicked, lisButton1Clicked, lisButton2Clicked, ctrlDown; //Bools that stores information if button was pressed.
 void CALLBACK FFBCALLBACK(PVOID data, PVOID userData) {//Creating local callback which just executes callback from ForceFeedBack class.
 	fFB.ffbToVJoy(data, userData);
 }
@@ -137,7 +137,18 @@ void updateCode() {
 		ffbStrength = 0;
 	}
 	mTV.inputLogic(rInput, axisX, axisY, axisZ, axisRX, isButton1Clicked, isButton2Clicked, isButton3Clicked, fR.result(1), fR.result(2), fR.result(3), fR.result(4), fR.result(5), fR.result(6), (int)fR.result(7), (int)fR.result(8), (int)fR.result(9), (int)fR.result(10), (int)fR.result(11), (int)fR.result(12), (int)fR.result(13), (int)fR.result(14), (int)fR.result(15), fR.result(17), fR.result(18), fR.result(19), (int)fR.result(22), sw.elapsedMilliseconds(), wc.hInstance);
-	vJ.feedDevice(1, axisX, axisY, axisZ, axisRX, isButton1Clicked, isButton2Clicked, isButton3Clicked);
+	if (rInput.isAlphabeticKeyDown((int)fR.result(10)) && !lisButton1Clicked && gear < 7) {
+		lisButton1Clicked = true;
+		gear++;
+	}
+	else
+		lisButton1Clicked = rInput.isAlphabeticKeyDown((int)fR.result(10));
+	if (rInput.isAlphabeticKeyDown((int)fR.result(11)) && !lisButton2Clicked && gear > -1) {
+		lisButton2Clicked = true;
+		gear--;
+	} else
+		lisButton2Clicked = rInput.isAlphabeticKeyDown((int)fR.result(11));
+	vJ.feedDevice(1, axisX, axisY, axisZ, axisRX, gear, isButton1Clicked, isButton2Clicked, isButton3Clicked);
 	isButton1Clicked = false;
 	isButton2Clicked = false;
 }
@@ -167,6 +178,16 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 			rInput.getData(lParam);
 			if (rInput.isMouseWheelUp())isButton1Clicked = true;
 			if (rInput.isMouseWheelDown())isButton2Clicked = true;
+			if (rInput.isMiddleMouseButtonDown()) {
+				pgear = gear;
+				gear = 0;
+			}
+			else if (pgear) {
+				gear = pgear;
+				pgear = 0;
+			}
+			if (rInput.isMouseWheelUp() && !rInput.isMiddleMouseButtonDown() && gear < 7) gear++;
+			if (rInput.isMouseWheelDown() && !rInput.isMiddleMouseButtonDown() && gear > -1) gear--;
 			mTV.mouseLogic(rInput, axisX, fR.result(0), fR.result(20), (int)fR.result(16), isButton1Clicked, isButton2Clicked, (int)fR.result(22));
 		break;
 	case WM_CLOSE:

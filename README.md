@@ -17,10 +17,14 @@ Enjoy.
 
 ## Usage example
 
-Useful for racing games, created especially for Assetto Corsa to remove traction control that was build into gamee.
+Useful for racing games, created especially for Assetto Corsa to remove traction control that wasgi build into gamee.
 Some games I tested it with: Assetto Corsa, Live For Speed, Rfactor.
 
 ## Release History
+* 1.82
+	* FIX: Keyboard filtering.
+	* ADD: H-Shifter emulation.
+	* ADD: Assetto Corsa configuration .ini (put in cfg\controllers\presets).
 * 1.81
 	* FIX: Buggy mouse lock key.
 	* FIX: Cursor not restored on exit.

@@ -56,10 +56,8 @@ void MouseToVjoy::inputLogic(CInputDevices input, INT &axisX, INT &axisY, INT &a
 		SleepEx(250, !(input.isAlphabeticKeyDown(mouseCenterKey)));
 		axisX = (32766 / 2);
 	}
-	if (useWheelAsShifter == 0) {
-		isButton1Clicked = input.isAlphabeticKeyDown(gearShiftUpKey);
-		isButton2Clicked = input.isAlphabeticKeyDown(gearShiftDownKey);
-	}
+	isButton1Clicked = input.isAlphabeticKeyDown(gearShiftUpKey) || isButton1Clicked;
+	isButton2Clicked = input.isAlphabeticKeyDown(gearShiftDownKey) || isButton2Clicked;
 	isButton3Clicked = input.isAlphabeticKeyDown(handBrakeKey);
 
 	if (_isCursorLocked)
@@ -83,14 +81,4 @@ void MouseToVjoy::mouseLogic(CInputDevices input, INT &X, DOUBLE sensitivity, DO
 	else if (X < -16384)
 		X = -16384;
 	X += 16384;
-	if (useWheelAsShifter == 1) {		
-		if (input.isMouseWheelUp()) {
-			//printf("UP\n");
-		}
-		else ;
-		if (input.isMouseWheelDown()) {
-			//printf("DOWN\n");
-		}
-		else ;
-	}
 };

@@ -22,11 +22,13 @@ public:
 	//If UINT iInterface exist, enable FFB to device.
 	int enableFFB(UINT iInterface);
 	//When UINT iInterface is accuired, feeds vars X Y Z RX to Axises X Y Z RX.
-	void feedDevice(UINT iInterface, INT X, INT Y, INT Z, INT RX, BOOL BUTTON1, BOOL BUTTON2, BOOL BUTTON3);
+	void feedDevice(UINT iInterface, INT X, INT Y, INT Z, INT RX, INT GEAR, BOOL BUTTON1, BOOL BUTTON2, BOOL BUTTON3);
 private:
 	//Gets status from vjoy device using vjoyinterface.dll.
 	VjdStat _status;
 	//Creates new joystick position array named iReport, used to feed all the data at the same time.
 	JOYSTICK_POSITION_V2 _iReport;
+	//Previous gear.
+	INT PGEAR;
 };
 #endif

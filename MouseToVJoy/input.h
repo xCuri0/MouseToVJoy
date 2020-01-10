@@ -36,6 +36,7 @@ public:
 	// to be sure the 
 
 	bool           isLeftMouseButtonDown() { return _isLeftMouseButtonPressed; }
+	bool           isMiddleMouseButtonDown() { return _isMiddleMouseButtonPressed; }
 	bool           isRightMouseButtonDown() { return _isRightMouseButtonPressed; }
 	bool		   isMouseWheelUp() { return _isMouseWheelUp; }
 	bool		   isMouseWheelDown() { return _isMouseWheelDown; }
@@ -86,6 +87,7 @@ private:
 	// Again, should be obvious what functions use these. 
 	// LMB = Left Mouse Button. RMB = Right Mouse Button
 	bool           _isLeftMouseButtonPressed;
+	bool           _isMiddleMouseButtonPressed;
 	bool           _isRightMouseButtonPressed;
 	bool           _isMouseWheelUp;
 	bool           _isMouseWheelDown;

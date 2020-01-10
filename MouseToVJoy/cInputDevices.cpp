@@ -69,6 +69,21 @@ void CInputDevices::getData(LPARAM lParam)
 		}
 
 
+		bool bStateDownThree = raw->data.mouse.usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_DOWN;
+		bool bStateUpThree = raw->data.mouse.usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_UP;
+
+		if (bStateDownThree == true && bStateUpThree == false)
+		{
+			_isMiddleMouseButtonPressed = true;
+			_isKeyboardButtonPressed[0x02] = true;
+		}
+
+		if (bStateUpThree == true)
+		{
+			_isMiddleMouseButtonPressed = false;
+			_isKeyboardButtonPressed[0x02] = false;
+		}
+
 	}
 	if (raw->header.dwType == RIM_TYPEKEYBOARD)
 	{
