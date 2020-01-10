@@ -17,7 +17,7 @@ Enjoy.
 
 ## Usage example
 
-Useful for racing games, created especially for Assetto Corsa to remove traction control that wasgi build into gamee.
+Useful for racing games, created especially for Assetto Corsa to remove traction control that was build into game.
 Some games I tested it with: Assetto Corsa, Live For Speed, Rfactor.
 
 ## Release History
