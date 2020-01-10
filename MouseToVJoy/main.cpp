@@ -26,7 +26,7 @@ FileRead fR;//Class used for reading and writing to config.txt file.
 ForceFeedBack fFB;//Used to recive and interpret ForceFeedback calls from game window.
 Stopwatch sw;//Measuring time in nanoseconds
 INT axisX, axisY, axisZ, axisRX, ffbStrength; //Local variables that stores all axis values and forcefeedback strength we need.
-BOOL isButton1Clicked, isButton2Clicked, isButton3Clicked; //Bools that stores information if button was pressed.
+BOOL isButton1Clicked, isButton2Clicked, isButton3Clicked, ctrlDown; //Bools that stores information if button was pressed.
 void CALLBACK FFBCALLBACK(PVOID data, PVOID userData) {//Creating local callback which just executes callback from ForceFeedBack class.
 	fFB.ffbToVJoy(data, userData);
 }
@@ -39,25 +39,24 @@ LRESULT CALLBACK keyboardHook(int nCode, WPARAM wParam, LPARAM lParam) {
 	case WM_SYSKEYUP:
 		PKBDLLHOOKSTRUCT p = (PKBDLLHOOKSTRUCT)(lParam);
 		USHORT vkCode = MapVirtualKey(p->scanCode, MAPVK_VSC_TO_VK);
-		if (vkCode == 17) {
-			if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
-				for (int i = 7; i <= 14; i++) {
-					if ((rInput.isAlphabeticKeyDown((int)fR.result(i)) && (int)fR.result(i) != 17)) {
-						if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
-							rInput._isKeyboardButtonPressed[17] = true;
-							return 1;
-						}
-						else if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
-							rInput._isKeyboardButtonPressed[17] = false;
-							return 1;
-						}
-						break;
+		if (vkCode == 17 && p->dwExtraInfo != 6969) {
+			ctrlDown = (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN);
+			for (int i = 7; i <= 14; i++) {
+				if ((rInput.isAlphabeticKeyDown((int)fR.result(i)) && (int)fR.result(i) != 17)) {
+					if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
+						rInput._isKeyboardButtonPressed[17] = true;
+						return 1;
 					}
+					else if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
+						rInput._isKeyboardButtonPressed[17] = false;
+						return 1;
+					}
+					break;
 				}
 			}
 		}
 		for (int i = 7; i <= 14; i++)
-			if ((int)fR.result(i) == vkCode && (int)fR.result(i) != 17 && (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) && rInput.isAlphabeticKeyDown(17)) {
+			if ((int)fR.result(i) == vkCode && (int)fR.result(i) != 17 && (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) && ctrlDown) {
 				// Set the CTRL key to up and set dwExtraInfo to le funni number so we can ignore it
 				keybd_event(17, 0, KEYEVENTF_KEYUP, 6969);
 				break;
