@@ -1,5 +1,5 @@
 #include "input.h"
-
+#include <iostream>
 void CInputDevices::getData(LPARAM lParam)
 {
 	// Determine how big the buffer should be
@@ -25,12 +25,12 @@ void CInputDevices::getData(LPARAM lParam)
 	if (_mouseYChange == 6969)
 		_mouseYChange = 0;
 
-	if (_mouseZChange / 120 == 1)
+	if (_mouseZChange == 120)
 		_isMouseWheelUp = true;
 	else
 		_isMouseWheelUp = false;
 
-	if (_mouseZChange / -120 == 1)
+	if (_mouseZChange == -120)
 		_isMouseWheelDown = true;
 	else
 		_isMouseWheelDown = false;

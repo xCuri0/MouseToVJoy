@@ -178,16 +178,22 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 			rInput.getData(lParam);
 			if (rInput.isMouseWheelUp())isButton1Clicked = true;
 			if (rInput.isMouseWheelDown())isButton2Clicked = true;
-			if (rInput.isMiddleMouseButtonDown()) {
+			if (rInput.isMiddleMouseButtonDown() && !pgear) {
 				pgear = gear;
 				gear = 0;
 			}
-			else if (pgear) {
+			else if (!rInput.isMiddleMouseButtonDown() && pgear) {
 				gear = pgear;
 				pgear = 0;
 			}
-			if (rInput.isMouseWheelUp() && !rInput.isMiddleMouseButtonDown() && gear < 7) gear++;
-			if (rInput.isMouseWheelDown() && !rInput.isMiddleMouseButtonDown() && gear > -1) gear--;
+			if (rInput.isMiddleMouseButtonDown()) {
+				if (rInput.isMouseWheelUp() && pgear < 7) pgear++;
+				if (rInput.isMouseWheelDown() && pgear > -1) pgear--;
+			}
+			else {
+				if (rInput.isMouseWheelUp() && gear < 7) gear++;
+				if (rInput.isMouseWheelDown() && gear > -1) gear--;
+			}
 			mTV.mouseLogic(rInput, axisX, fR.result(0), fR.result(20), (int)fR.result(16), isButton1Clicked, isButton2Clicked, (int)fR.result(22));
 		break;
 	case WM_CLOSE:
