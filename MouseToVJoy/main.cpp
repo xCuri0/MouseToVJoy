@@ -199,7 +199,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 			}
 			else if ((int)fR.result(23)) {
 				if (rInput.isMouseWheelUp() && axisY <= 32767) axisY += 32767 / (int)fR.result(23);
-				if (rInput.isMouseWheelDown() && axisY >= 0) axisY -= 32767 / (int)fR.result(23);
+				if (rInput.isMouseWheelDown() && axisY > 0) axisY -= 32767 / (int)fR.result(23);
 			}
 			mTV.mouseLogic(rInput, axisX, fR.result(0), fR.result(20), (int)fR.result(16), isButton1Clicked, isButton2Clicked, (int)fR.result(22));
 		break;
