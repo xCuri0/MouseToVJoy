@@ -84,7 +84,7 @@ void initializationCode() {
 	SetConsoleCtrlHandler((PHANDLER_ROUTINE)(exitHandler), TRUE);//Set the exit handler
 	string configFileName = "config.txt";
 	//what strings to look for in config file.
-	string checkArray[23] = { "Sensitivity", "AttackTimeThrottle", "ReleaseTimeThrottle", "AttackTimeBreak", "ReleaseTimeBreak", "AttackTimeClutch", "ReleaseTimeClutch", "ThrottleKey", "BreakKey", "ClutchKey", "GearShiftUpKey", "GearShiftDownKey", "HandBrakeKey", "MouseLockKey", "MouseCenterKey", "UseMouse","UseCenterReduction" , "AccelerationThrottle", "AccelerationBreak", "AccelerationClutch", "CenterMultiplier", "UseForceFeedback", "UseWheelAsShifter" };
+	string checkArray[24] = { "Sensitivity", "AttackTimeThrottle", "ReleaseTimeThrottle", "AttackTimeBreak", "ReleaseTimeBreak", "AttackTimeClutch", "ReleaseTimeClutch", "ThrottleKey", "BreakKey", "ClutchKey", "GearShiftUpKey", "GearShiftDownKey", "HandBrakeKey", "MouseLockKey", "MouseCenterKey", "UseMouse","UseCenterReduction" , "AccelerationThrottle", "AccelerationBreak", "AccelerationClutch", "CenterMultiplier", "UseForceFeedback", "UseWheelAsShifter", "UseWheelAsThrottle" };
 	fR.newFile(configFileName, checkArray);//read configFileName and look for checkArray
 	for (int i = 7; i <= 14; i++)
 		if ((int)fR.result(i) == 17) {
@@ -113,6 +113,7 @@ void initializationCode() {
 	printf("Use Center Reduction = %d \n", (int)fR.result(16));
 	printf("Use Force Feedback = %d \n", (int)fR.result(21));
 	printf("Use Mouse Wheel As Shifter = %d \n", (int)fR.result(22));
+	printf("Use Mouse Wheel As Throttle = %d \n", (int)fR.result(23));
 	printf("Acceleration Throttle = %.2f \n", fR.result(17));
 	printf("Acceleration Break = %.2f \n", fR.result(18));
 	printf("Acceleration Clutch = %.2f \n", fR.result(19));
@@ -136,7 +137,7 @@ void updateCode() {
 		axisX = axisX + ffbStrength;
 		ffbStrength = 0;
 	}
-	mTV.inputLogic(rInput, axisX, axisY, axisZ, axisRX, isButton1Clicked, isButton2Clicked, isButton3Clicked, fR.result(1), fR.result(2), fR.result(3), fR.result(4), fR.result(5), fR.result(6), (int)fR.result(7), (int)fR.result(8), (int)fR.result(9), (int)fR.result(10), (int)fR.result(11), (int)fR.result(12), (int)fR.result(13), (int)fR.result(14), (int)fR.result(15), fR.result(17), fR.result(18), fR.result(19), (int)fR.result(22), sw.elapsedMilliseconds(), wc.hInstance);
+	mTV.inputLogic(rInput, axisX, axisY, axisZ, axisRX, isButton1Clicked, isButton2Clicked, isButton3Clicked, fR.result(1), fR.result(2), fR.result(3), fR.result(4), fR.result(5), fR.result(6), (int)fR.result(7), (int)fR.result(8), (int)fR.result(9), (int)fR.result(10), (int)fR.result(11), (int)fR.result(12), (int)fR.result(13), (int)fR.result(14), (int)fR.result(15), fR.result(17), fR.result(18), fR.result(19), ((int)fR.result(22) && !(int)fR.result(23)) || (!(int)fR.result(22) && !(int)fR.result(23)), sw.elapsedMilliseconds(), wc.hInstance);
 	if (rInput.isAlphabeticKeyDown((int)fR.result(10)) && !lisButton1Clicked && gear < 7) {
 		lisButton1Clicked = true;
 		gear++;
@@ -176,23 +177,29 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 	case WM_INPUT:
 		//When window recives input message get data for rinput device and run mouse logic function.
 			rInput.getData(lParam);
-			if (rInput.isMouseWheelUp())isButton1Clicked = true;
-			if (rInput.isMouseWheelDown())isButton2Clicked = true;
-			if (rInput.isMiddleMouseButtonDown() && !pgear) {
-				pgear = gear;
-				gear = 0;
+			if ((int)fR.result(22) && !(int)fR.result(23)) {
+				if (rInput.isMouseWheelUp())isButton1Clicked = true;
+				if (rInput.isMouseWheelDown())isButton2Clicked = true;
+				if (rInput.isMiddleMouseButtonDown() && !pgear) {
+					pgear = gear;
+					gear = 0;
+				}
+				else if (!rInput.isMiddleMouseButtonDown() && pgear) {
+					gear = pgear;
+					pgear = 0;
+				}
+				if (rInput.isMiddleMouseButtonDown()) {
+					if (rInput.isMouseWheelUp() && pgear < 7) pgear++;
+					if (rInput.isMouseWheelDown() && pgear > -1) pgear--;
+				}
+				else {
+					if (rInput.isMouseWheelUp() && gear < 7) gear++;
+					if (rInput.isMouseWheelDown() && gear > -1) gear--;
+				}
 			}
-			else if (!rInput.isMiddleMouseButtonDown() && pgear) {
-				gear = pgear;
-				pgear = 0;
-			}
-			if (rInput.isMiddleMouseButtonDown()) {
-				if (rInput.isMouseWheelUp() && pgear < 7) pgear++;
-				if (rInput.isMouseWheelDown() && pgear > -1) pgear--;
-			}
-			else {
-				if (rInput.isMouseWheelUp() && gear < 7) gear++;
-				if (rInput.isMouseWheelDown() && gear > -1) gear--;
+			else if ((int)fR.result(23)) {
+				if (rInput.isMouseWheelUp() && axisY <= 32767) axisY += 32767 / (int)fR.result(23);
+				if (rInput.isMouseWheelDown() && axisY >= 0) axisY -= 32767 / (int)fR.result(23);
 			}
 			mTV.mouseLogic(rInput, axisX, fR.result(0), fR.result(20), (int)fR.result(16), isButton1Clicked, isButton2Clicked, (int)fR.result(22));
 		break;

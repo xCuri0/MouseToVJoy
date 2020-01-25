@@ -17,6 +17,7 @@ UseMouse = 1
 UseCenterReduction = 1
 UseForceFeedback = 1
 UseWheelAsShifter = 1
+UseWheelAsThrottle = 0
 AccelerationThrottle = 1.01
 AccelerationBreak = 1.01
 AccelerationClutch = 1.01
