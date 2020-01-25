@@ -21,6 +21,10 @@ Useful for racing games, created especially for Assetto Corsa to remove traction
 Some games I tested it with: Assetto Corsa, Live For Speed, Rfactor.
 
 ## Release History
+* 1.83
+	* FIX: Scroll wheel issues.
+	* ADD: `Use Wheel As Throttle`. Set UseWheelAsThrottle to the number of steps to use (0 to disable).
+	* ADD: When using scroll wheel as shifter put gear in neutral by holding middle. You can change gears in this mode and when you release it will shift to it.
 * 1.82
 	* FIX: Keyboard filtering.
 	* ADD: H-Shifter emulation.
