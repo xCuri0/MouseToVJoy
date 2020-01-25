@@ -229,6 +229,13 @@ Mouse wheel up for next gear and mouse wheel down for lower gear.
 
 E.g. UseWheelAsShifter = 1
 
+### UseWheelAsThrottle
+
+Number of steps to use for mouse wheel as throttle.
+0 to Disable.
+
+E.g. UseWheelAsThrottle = 10
+
 ### AccelerationThrottle
 
 Whenever to add linear acceleration on throttle Vjoy Axis.
