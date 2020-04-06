@@ -35,6 +35,7 @@ ForceFeedBack fFB;//Used to recive and interpret ForceFeedback calls from game w
 Stopwatch sw;//Measuring time in nanoseconds
 INT axisX, axisY, axisZ, axisRX, gear, pgear, ffbStrength; //Local variables that stores all axis values and forcefeedback strength we need.
 BOOL isButton1Clicked, isButton2Clicked, isButton3Clicked, lisButton1Clicked, lisButton2Clicked, ctrlDown, touchpad; //Bools that stores information if button was pressed.
+RECT bounds = { -1, -1, -1, -1 };
 
 // Contact information parsed from the HID report descriptor.
 struct contact_info
@@ -503,6 +504,63 @@ BOOL HasPrecisionTouchpad() {
     }
     return false;
 }
+void WriteCalibration() {
+    std::ofstream calib;
+    calib.open("tpcalib.dat");
+    calib << bounds.left << std::endl;
+    calib << bounds.right << std::endl;
+    calib << bounds.top << std::endl;
+    calib << bounds.bottom << std::endl;
+    calib.close();
+}
+
+void ReadCalibration() {
+    int i = 0;
+    std::ifstream input("tpcalib.dat");
+    if (input.good()) {
+        for (std::string line; std::getline(input, line); )
+        {
+            switch (i) {
+            case 0:
+                bounds.left = std::stol(line.c_str());
+                break;
+            case 1:
+                bounds.right = std::stol(line.c_str());
+                break;
+            case 2:
+                bounds.top = std::stol(line.c_str());
+                break;
+            case 3:
+                bounds.bottom = std::stol(line.c_str());
+                break;
+            }
+            i++;
+        }
+        printf("Loaded calibration %d %d %d %d\n", bounds.left, bounds.right, bounds.top, bounds.bottom);
+    }
+    else {
+        printf("Calibrate touchpad by touching each corner\n");
+    }
+}
+
+void HandleCalibration(LONG x, LONG y) {
+    if (x < bounds.left || bounds.left == -1) {
+        bounds.left = x;
+        WriteCalibration();
+    }
+    if (x > bounds.right || bounds.right == -1) {
+        bounds.right = x;
+        WriteCalibration();
+    }
+    if (y < bounds.top || bounds.top == -1) {
+        bounds.top = y;
+        WriteCalibration();
+    }
+    if (y > bounds.bottom || bounds.bottom == -1) {
+        bounds.bottom = y;
+        WriteCalibration();
+    }
+}
 //Code that is run once application is initialized, test virtual joystick and accuires it, also it reads config.txt file and prints out menu and variables.
 void initializationCode() {
 	//Code that is run only once, tests vjoy device, reads config file and prints basic out accuired vars.
@@ -524,7 +582,8 @@ void initializationCode() {
 			break;
 		}
 	if (HasPrecisionTouchpad() && (int)fR.result(24)) {
-		printf("Found precision touchpad, using it for axis Y and RX\n");
+		printf("Found precision touchpad, using it for axis Z and RX\n");
+        ReadCalibration();
 		touchpad = true;
 	}
 	else if ((int)fR.result(24)) {
@@ -606,10 +665,23 @@ BOOL HandleTouchpad(LPARAM* lParam) {
     malloc_ptr<RAWINPUT> input = GetRawInput(hInput, hdr);
     std::vector<contact> contacts = GetContacts(dev, input.get());
 
-    for (const contact& contact : contacts) {
-        //HandleCalibration(contact.point.x, contact.point.y);
-        printf("%d %d \n", contact.point.x, contact.point.y);
+    if (contacts.empty()) {
+        axisZ = 0;
+        axisRX = 0;
+        return true;
     }
+
+    for (const contact& contact : contacts) {
+        HandleCalibration(contact.point.x, contact.point.y);
+    }
+    contact contact = GetPrimaryContact(contacts);
+    double x = ((double)contact.point.x - bounds.left) / ((double)bounds.right - bounds.left);
+    double y = ((double)contact.point.y - bounds.top) / ((double)bounds.bottom - bounds.top);
+
+    axisZ = floor(x * 32767);
+    axisRX = floor(y * 32767);
+    printf("%f %f\n", x, y);
+
     return true;
 }
 //Creates callback on window, registers raw input devices and processes mouse and keyboard input
