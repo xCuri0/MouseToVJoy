@@ -87,7 +87,7 @@ https://sourceforge.net/projects/vjoystick/files/Beta%202.x/
 ## Configuration
 
 Program can be configured through config.txt file, which have 21 different values, that can be modified through any text editor.
-For easier tweaking use VjoyMonitor to visualize axis changes.
+For easier tweaking use VjoyMonitor to visualize axis changes. The keycodes for mouse are left click = 1, right click = 2 and middle click = 4.
 
 ### Sensitivity
 

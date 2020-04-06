@@ -75,13 +75,13 @@ void CInputDevices::getData(LPARAM lParam)
 		if (bStateDownThree == true && bStateUpThree == false)
 		{
 			_isMiddleMouseButtonPressed = true;
-			_isKeyboardButtonPressed[0x02] = true;
+			_isKeyboardButtonPressed[0x04] = true;
 		}
 
 		if (bStateUpThree == true)
 		{
 			_isMiddleMouseButtonPressed = false;
-			_isKeyboardButtonPressed[0x02] = false;
+			_isKeyboardButtonPressed[0x04] = false;
 		}
 
 	}

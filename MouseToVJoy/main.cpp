@@ -678,9 +678,8 @@ BOOL HandleTouchpad(LPARAM* lParam) {
     double x = ((double)contact.point.x - bounds.left) / ((double)bounds.right - bounds.left);
     double y = ((double)contact.point.y - bounds.top) / ((double)bounds.bottom - bounds.top);
 
-    axisZ = floor(x * 32767);
-    axisRX = floor(y * 32767);
-    printf("%f %f\n", x, y);
+    axisZ = (INT)round(x * 32767);
+    axisRX = (INT)round(y * 32767);
 
     return true;
 }
