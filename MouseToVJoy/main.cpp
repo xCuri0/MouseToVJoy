@@ -10,6 +10,14 @@
 #include "input.h"
 #include "stopwatch.h"
 #include "forcefeedback.h"
+#include <vector>
+#include <unordered_map>
+#include <hidsdi.h>
+#include <hidusage.h>
+#include <optional>
+
+#define HID_USAGE_DIGITIZER_CONTACT_ID 0x51
+#define HID_USAGE_DIGITIZER_CONTACT_COUNT 0x54
 
 int wheelPos = 0;
 using namespace std;
@@ -26,7 +34,56 @@ FileRead fR;//Class used for reading and writing to config.txt file.
 ForceFeedBack fFB;//Used to recive and interpret ForceFeedback calls from game window.
 Stopwatch sw;//Measuring time in nanoseconds
 INT axisX, axisY, axisZ, axisRX, gear, pgear, ffbStrength; //Local variables that stores all axis values and forcefeedback strength we need.
-BOOL isButton1Clicked, isButton2Clicked, isButton3Clicked, lisButton1Clicked, lisButton2Clicked, ctrlDown; //Bools that stores information if button was pressed.
+BOOL isButton1Clicked, isButton2Clicked, isButton3Clicked, lisButton1Clicked, lisButton2Clicked, ctrlDown, touchpad; //Bools that stores information if button was pressed.
+
+// Contact information parsed from the HID report descriptor.
+struct contact_info
+{
+	USHORT link;
+};
+
+// The data for a touch event.
+struct contact
+{
+	contact_info info;
+	ULONG id;
+	POINT point;
+};
+
+// Wrapper for malloc with unique_ptr semantics, to allow
+// for variable-sized structures.
+struct free_deleter { void operator()(void* ptr) { free(ptr); } };
+template<typename T> using malloc_ptr = std::unique_ptr<T, free_deleter>;
+
+// Device information, such as touch area bounds and HID offsets.
+// This can be reused across HID events, so we only have to parse
+// this info once.
+struct device_info
+{
+	malloc_ptr<_HIDP_PREPARSED_DATA> preparsedData; // HID internal data
+	USHORT linkContactCount = 0; // Link collection for number of contacts present
+	std::vector<contact_info> contactInfo; // Link collection and touch area for each contact
+};
+
+// Caches per-device info for better performance
+static std::unordered_map<HANDLE, device_info> g_devices;
+
+// Holds the current primary touch point ID
+static thread_local ULONG t_primaryContactID;
+
+// Allocates a malloc_ptr with the given size. The size must be
+// greater than or equal to sizeof(T).
+template<typename T>
+static malloc_ptr<T>
+make_malloc(size_t size)
+{
+	T* ptr = (T*)malloc(size);
+	if (ptr == nullptr) {
+		throw std::bad_alloc();
+	}
+	return malloc_ptr<T>(ptr);
+}
+
 void CALLBACK FFBCALLBACK(PVOID data, PVOID userData) {//Creating local callback which just executes callback from ForceFeedBack class.
 	fFB.ffbToVJoy(data, userData);
 }
@@ -67,10 +124,384 @@ LRESULT CALLBACK keyboardHook(int nCode, WPARAM wParam, LPARAM lParam) {
 }
 BOOL exitHandler(DWORD event) {
 	if (event == CTRL_CLOSE_EVENT) {
-		mTV.inputLogic(rInput, axisX, axisY, axisZ, axisRX, isButton1Clicked, isButton2Clicked, isButton3Clicked, fR.result(1), fR.result(2), fR.result(3), fR.result(4), fR.result(5), fR.result(6), (int)fR.result(7), (int)fR.result(8), (int)fR.result(9), (int)fR.result(10), (int)fR.result(11), (int)fR.result(12), (int)fR.result(13), (int)fR.result(14), (int)fR.result(15), fR.result(17), fR.result(18), fR.result(19), (int)fR.result(22), sw.elapsedMilliseconds(), NULL);
+		mTV.inputLogic(rInput, axisX, axisY, axisZ, axisRX, isButton1Clicked, isButton2Clicked, isButton3Clicked, fR.result(1), fR.result(2), fR.result(3), fR.result(4), fR.result(5), fR.result(6), (int)fR.result(7), (int)fR.result(8), (int)fR.result(9), (int)fR.result(10), (int)fR.result(11), (int)fR.result(12), (int)fR.result(13), (int)fR.result(14), (int)fR.result(15), fR.result(17), fR.result(18), fR.result(19), (int)fR.result(22), touchpad, sw.elapsedMilliseconds(), NULL);
 		return true;
 	}
 	return false;
+}
+// Reads the raw input header for the given raw input handle.
+static RAWINPUTHEADER GetRawInputHeader(HRAWINPUT hInput)
+{
+    RAWINPUTHEADER hdr;
+    UINT size = sizeof(hdr);
+    if (GetRawInputData(hInput, RID_HEADER, &hdr, &size, sizeof(RAWINPUTHEADER)) == (UINT)-1) {
+        throw;
+    }
+    return hdr;
+}
+
+// Reads the raw input data for the given raw input handle.
+static malloc_ptr<RAWINPUT> GetRawInput(HRAWINPUT hInput, RAWINPUTHEADER hdr)
+{
+    malloc_ptr<RAWINPUT> input = make_malloc<RAWINPUT>(hdr.dwSize);
+    UINT size = hdr.dwSize;
+    if (GetRawInputData(hInput, RID_INPUT, input.get(), &size, sizeof(RAWINPUTHEADER)) == (UINT)-1) {
+        throw;
+    }
+    return input;
+}
+
+// Gets info about a raw input device.
+static RID_DEVICE_INFO GetRawInputDeviceInfo(HANDLE hDevice)
+{
+    RID_DEVICE_INFO info;
+    info.cbSize = sizeof(RID_DEVICE_INFO);
+    UINT size = sizeof(RID_DEVICE_INFO);
+    if (GetRawInputDeviceInfoW(hDevice, RIDI_DEVICEINFO, &info, &size) == (UINT)-1) {
+        throw;
+    }
+    return info;
+}
+
+// Reads the preparsed HID report descriptor for the device
+// that generated the given raw input.
+static malloc_ptr<_HIDP_PREPARSED_DATA> GetHidPreparsedData(HANDLE hDevice)
+{
+    UINT size = 0;
+    if (GetRawInputDeviceInfoW(hDevice, RIDI_PREPARSEDDATA, nullptr, &size) == (UINT)-1) {
+        throw;
+    }
+    malloc_ptr<_HIDP_PREPARSED_DATA> preparsedData = make_malloc<_HIDP_PREPARSED_DATA>(size);
+    if (GetRawInputDeviceInfoW(hDevice, RIDI_PREPARSEDDATA, preparsedData.get(), &size) == (UINT)-1) {
+        throw;
+    }
+    return preparsedData;
+}
+
+// Returns all input button caps for the given preparsed
+// HID report descriptor.
+static std::vector<HIDP_BUTTON_CAPS> GetHidInputButtonCaps(PHIDP_PREPARSED_DATA preparsedData)
+{
+    NTSTATUS status;
+    HIDP_CAPS caps;
+    status = HidP_GetCaps(preparsedData, &caps);
+    if (status != HIDP_STATUS_SUCCESS) {
+        throw;
+    }
+    USHORT numCaps = caps.NumberInputButtonCaps;
+    std::vector<HIDP_BUTTON_CAPS> buttonCaps(numCaps);
+    status = HidP_GetButtonCaps(HidP_Input, &buttonCaps[0], &numCaps, preparsedData);
+    if (status != HIDP_STATUS_SUCCESS) {
+        throw;
+    }
+    buttonCaps.resize(numCaps);
+    return buttonCaps;
+}
+
+// Returns all input value caps for the given preparsed
+// HID report descriptor.
+static std::vector<HIDP_VALUE_CAPS> GetHidInputValueCaps(PHIDP_PREPARSED_DATA preparsedData)
+{
+    NTSTATUS status;
+    HIDP_CAPS caps;
+    status = HidP_GetCaps(preparsedData, &caps);
+    if (status != HIDP_STATUS_SUCCESS) {
+        throw;
+    }
+    USHORT numCaps = caps.NumberInputValueCaps;
+    std::vector<HIDP_VALUE_CAPS> valueCaps(numCaps);
+    status = HidP_GetValueCaps(HidP_Input, &valueCaps[0], &numCaps, preparsedData);
+    if (status != HIDP_STATUS_SUCCESS) {
+        throw;
+    }
+    valueCaps.resize(numCaps);
+    return valueCaps;
+}
+
+// Reads the pressed status of a single HID report button.
+static bool GetHidUsageButton(
+    HIDP_REPORT_TYPE reportType,
+    USAGE usagePage,
+    USHORT linkCollection,
+    USAGE usage,
+    PHIDP_PREPARSED_DATA preparsedData,
+    PBYTE report,
+    ULONG reportLen)
+{
+    ULONG numUsages = HidP_MaxUsageListLength(
+        reportType,
+        usagePage,
+        preparsedData);
+    std::vector<USAGE> usages(numUsages);
+    NTSTATUS status = HidP_GetUsages(
+        reportType,
+        usagePage,
+        linkCollection,
+        &usages[0],
+        &numUsages,
+        preparsedData,
+        (PCHAR)report,
+        reportLen);
+    if (status != HIDP_STATUS_SUCCESS) {
+        throw;
+    }
+    usages.resize(numUsages);
+    return std::find(usages.begin(), usages.end(), usage) != usages.end();
+}
+
+// Reads a single HID report value in logical units.
+static ULONG GetHidUsageLogicalValue(
+    HIDP_REPORT_TYPE reportType,
+    USAGE usagePage,
+    USHORT linkCollection,
+    USAGE usage,
+    PHIDP_PREPARSED_DATA preparsedData,
+    PBYTE report,
+    ULONG reportLen)
+{
+    ULONG value;
+    NTSTATUS status = HidP_GetUsageValue(
+        reportType,
+        usagePage,
+        linkCollection,
+        usage,
+        &value,
+        preparsedData,
+        (PCHAR)report,
+        reportLen);
+    if (status != HIDP_STATUS_SUCCESS) {
+        throw;
+    }
+    return value;
+}
+
+// Reads a single HID report value in physical units.
+static LONG GetHidUsagePhysicalValue(
+    HIDP_REPORT_TYPE reportType,
+    USAGE usagePage,
+    USHORT linkCollection,
+    USAGE usage,
+    PHIDP_PREPARSED_DATA preparsedData,
+    PBYTE report,
+    ULONG reportLen)
+{
+    LONG value;
+    NTSTATUS status = HidP_GetScaledUsageValue(
+        reportType,
+        usagePage,
+        linkCollection,
+        usage,
+        &value,
+        preparsedData,
+        (PCHAR)report,
+        reportLen);
+    if (status != HIDP_STATUS_SUCCESS) {
+        return -1;
+    }
+    return value;
+}
+
+// Gets the device info associated with the given raw input. Uses the
+// cached info if available; otherwise parses the HID report descriptor
+// and stores it into the cache.
+static device_info& GetDeviceInfo(HANDLE hDevice)
+{
+    if (g_devices.count(hDevice)) {
+        return g_devices.at(hDevice);
+    }
+
+    device_info dev;
+    std::optional<USHORT> linkContactCount;
+    dev.preparsedData = GetHidPreparsedData(hDevice);
+
+    // Struct to hold our parser state
+    struct contact_info_tmp
+    {
+        bool hasContactID = false;
+        bool hasTip = false;
+        bool hasX = false;
+        bool hasY = false;
+    };
+    std::unordered_map<USHORT, contact_info_tmp> contacts;
+
+    // Get the touch area for all the contacts. Also make sure that each one
+    // is actually a contact, as specified by:
+    // https://docs.microsoft.com/en-us/windows-hardware/design/component-guidelines/windows-precision-touchpad-required-hid-top-level-collections
+    for (const HIDP_VALUE_CAPS& cap : GetHidInputValueCaps(dev.preparsedData.get())) {
+        if (cap.IsRange || !cap.IsAbsolute) {
+            continue;
+        }
+
+        if (cap.UsagePage == HID_USAGE_PAGE_GENERIC) {
+            if (cap.NotRange.Usage == HID_USAGE_GENERIC_X) {
+                contacts[cap.LinkCollection].hasX = true;
+            }
+            else if (cap.NotRange.Usage == HID_USAGE_GENERIC_Y) {
+                contacts[cap.LinkCollection].hasY = true;
+            }
+        }
+        else if (cap.UsagePage == HID_USAGE_PAGE_DIGITIZER) {
+            if (cap.NotRange.Usage == HID_USAGE_DIGITIZER_CONTACT_COUNT) {
+                linkContactCount = cap.LinkCollection;
+            }
+            else if (cap.NotRange.Usage == HID_USAGE_DIGITIZER_CONTACT_ID) {
+                contacts[cap.LinkCollection].hasContactID = true;
+            }
+        }
+    }
+
+    for (const HIDP_BUTTON_CAPS& cap : GetHidInputButtonCaps(dev.preparsedData.get())) {
+        if (cap.UsagePage == HID_USAGE_PAGE_DIGITIZER) {
+            if (cap.NotRange.Usage == HID_USAGE_DIGITIZER_TIP_SWITCH) {
+                contacts[cap.LinkCollection].hasTip = true;
+            }
+        }
+    }
+
+    if (!linkContactCount.has_value()) {
+        throw std::runtime_error("No contact count usage found");
+    }
+    dev.linkContactCount = linkContactCount.value();
+
+    for (const auto& kvp : contacts) {
+        USHORT link = kvp.first;
+        const contact_info_tmp& info = kvp.second;
+        if (info.hasContactID && info.hasTip && info.hasX && info.hasY) {
+            dev.contactInfo.push_back({ link });
+        }
+    }
+
+    return g_devices[hDevice] = std::move(dev);
+}
+
+// Reads all touch contact points from a raw input event.
+static std::vector<contact> GetContacts(device_info& dev, RAWINPUT* input)
+{
+    std::vector<contact> contacts;
+
+    DWORD sizeHid = input->data.hid.dwSizeHid;
+    DWORD count = input->data.hid.dwCount;
+    BYTE* rawData = input->data.hid.bRawData;
+    if (count == 0) {
+        return contacts;
+    }
+
+    ULONG numContacts = GetHidUsageLogicalValue(
+        HidP_Input,
+        HID_USAGE_PAGE_DIGITIZER,
+        dev.linkContactCount,
+        HID_USAGE_DIGITIZER_CONTACT_COUNT,
+        dev.preparsedData.get(),
+        rawData,
+        sizeHid);
+
+    if (numContacts > dev.contactInfo.size()) {
+        numContacts = (ULONG)dev.contactInfo.size();
+    }
+
+    // It's a little ambiguous as to whether contact count includes
+    // released contacts. I interpreted the specs as a yes, but this
+    // may require additional testing.
+    for (ULONG i = 0; i < numContacts; ++i) {
+        contact_info& info = dev.contactInfo[i];
+        bool tip = GetHidUsageButton(
+            HidP_Input,
+            HID_USAGE_PAGE_DIGITIZER,
+            info.link,
+            HID_USAGE_DIGITIZER_TIP_SWITCH,
+            dev.preparsedData.get(),
+            rawData,
+            sizeHid);
+
+        if (!tip) {
+            continue;
+        }
+
+        ULONG id = GetHidUsageLogicalValue(
+            HidP_Input,
+            HID_USAGE_PAGE_DIGITIZER,
+            info.link,
+            HID_USAGE_DIGITIZER_CONTACT_ID,
+            dev.preparsedData.get(),
+            rawData,
+            sizeHid);
+
+        LONG x = GetHidUsagePhysicalValue(
+            HidP_Input,
+            HID_USAGE_PAGE_GENERIC,
+            info.link,
+            HID_USAGE_GENERIC_X,
+            dev.preparsedData.get(),
+            rawData,
+            sizeHid);
+
+        LONG y = GetHidUsagePhysicalValue(
+            HidP_Input,
+            HID_USAGE_PAGE_GENERIC,
+            info.link,
+            HID_USAGE_GENERIC_Y,
+            dev.preparsedData.get(),
+            rawData,
+            sizeHid);
+
+        if (x != -1 && y != -1)
+            contacts.push_back({ info, id, { x, y } });
+    }
+
+    return contacts;
+}
+
+// Returns the primary contact for a given list of contacts. This is
+// necessary since we are mapping potentially many touches to a single
+// mouse position. Currently this just stores a global contact ID and
+// uses that as the primary contact.
+static contact GetPrimaryContact(const std::vector<contact>& contacts)
+{
+    for (const contact& contact : contacts) {
+        if (contact.id == t_primaryContactID) {
+            return contact;
+        }
+    }
+    t_primaryContactID = contacts[0].id;
+    return contacts[0];
+}
+BOOL HasPrecisionTouchpad() {
+    std::vector<RAWINPUTDEVICELIST> devices(64);
+
+    while (true) {
+        UINT numDevices = (UINT)devices.size();
+        UINT ret = GetRawInputDeviceList(&devices[0], &numDevices, sizeof(RAWINPUTDEVICELIST));
+        if (ret != (UINT)-1) {
+            devices.resize(ret);
+            break;
+        }
+        else if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+            devices.resize(numDevices);
+        }
+        else {
+            return false;
+        }
+    }
+
+    for (RAWINPUTDEVICELIST dev : devices) {
+        RID_DEVICE_INFO info;
+        info.cbSize = sizeof(RID_DEVICE_INFO);
+        UINT size = sizeof(RID_DEVICE_INFO);
+        if (GetRawInputDeviceInfoW(dev.hDevice, RIDI_DEVICEINFO, &info, &size) == (UINT)-1) {
+            continue;
+        }
+        if (info.dwType == RIM_TYPEHID &&
+            info.hid.usUsagePage == HID_USAGE_PAGE_DIGITIZER &&
+            info.hid.usUsage == HID_USAGE_DIGITIZER_TOUCH_PAD) {
+            device_info& info = GetDeviceInfo(dev.hDevice);
+            if (!info.contactInfo.empty()) {
+                return true;
+            }
+            else
+                break;
+        }
+    }
+    return false;
 }
 //Code that is run once application is initialized, test virtual joystick and accuires it, also it reads config.txt file and prints out menu and variables.
 void initializationCode() {
@@ -84,7 +515,7 @@ void initializationCode() {
 	SetConsoleCtrlHandler((PHANDLER_ROUTINE)(exitHandler), TRUE);//Set the exit handler
 	string configFileName = "config.txt";
 	//what strings to look for in config file.
-	string checkArray[24] = { "Sensitivity", "AttackTimeThrottle", "ReleaseTimeThrottle", "AttackTimeBreak", "ReleaseTimeBreak", "AttackTimeClutch", "ReleaseTimeClutch", "ThrottleKey", "BreakKey", "ClutchKey", "GearShiftUpKey", "GearShiftDownKey", "HandBrakeKey", "MouseLockKey", "MouseCenterKey", "UseMouse","UseCenterReduction" , "AccelerationThrottle", "AccelerationBreak", "AccelerationClutch", "CenterMultiplier", "UseForceFeedback", "UseWheelAsShifter", "UseWheelAsThrottle" };
+	string checkArray[25] = { "Sensitivity", "AttackTimeThrottle", "ReleaseTimeThrottle", "AttackTimeBreak", "ReleaseTimeBreak", "AttackTimeClutch", "ReleaseTimeClutch", "ThrottleKey", "BreakKey", "ClutchKey", "GearShiftUpKey", "GearShiftDownKey", "HandBrakeKey", "MouseLockKey", "MouseCenterKey", "UseMouse","UseCenterReduction" , "AccelerationThrottle", "AccelerationBreak", "AccelerationClutch", "CenterMultiplier", "UseForceFeedback", "UseWheelAsShifter", "UseWheelAsThrottle", "Touchpad" };
 	fR.newFile(configFileName, checkArray);//read configFileName and look for checkArray
 	for (int i = 7; i <= 14; i++)
 		if ((int)fR.result(i) == 17) {
@@ -92,6 +523,16 @@ void initializationCode() {
 			SetWindowsHookEx(WH_KEYBOARD_LL, keyboardHook, wc.hInstance, 0);
 			break;
 		}
+	if (HasPrecisionTouchpad() && (int)fR.result(24)) {
+		printf("Found precision touchpad, using it for axis Y and RX\n");
+		touchpad = true;
+	}
+	else if ((int)fR.result(24)) {
+		printf("Could not find precision touchpad\n");
+	}
+    else {
+        printf("Touchpad disabled\n");
+    }
 	//Printing basic menu with assigned values
 	printf("==================================\n");
 	printf("Sensitivity = %.2f \n", fR.result(0));
@@ -124,7 +565,7 @@ void initializationCode() {
 //Code that is run every time program gets an message from enviroment(mouse movement, mouse click etc.), manages input logic and feeding device.
 //Update code is sleeping for 1 miliseconds to make is less cpu demanding
 void updateCode() {
-	Sleep(10);
+	Sleep(1);
 	if (fFB.getFfbSize().getEffectType() == "Constant") {
 		if (fFB.getFfbSize().getDirection() > 100)
 			ffbStrength = (int)((fFB.getFfbSize().getMagnitude()) * (sw.elapsedMilliseconds() * 0.001));
@@ -137,7 +578,7 @@ void updateCode() {
 		axisX = axisX + ffbStrength;
 		ffbStrength = 0;
 	}
-	mTV.inputLogic(rInput, axisX, axisY, axisZ, axisRX, isButton1Clicked, isButton2Clicked, isButton3Clicked, fR.result(1), fR.result(2), fR.result(3), fR.result(4), fR.result(5), fR.result(6), (int)fR.result(7), (int)fR.result(8), (int)fR.result(9), (int)fR.result(10), (int)fR.result(11), (int)fR.result(12), (int)fR.result(13), (int)fR.result(14), (int)fR.result(15), fR.result(17), fR.result(18), fR.result(19), ((int)fR.result(22) && !(int)fR.result(23)) || (!(int)fR.result(22) && !(int)fR.result(23)), sw.elapsedMilliseconds(), wc.hInstance);
+	mTV.inputLogic(rInput, axisX, axisY, axisZ, axisRX, isButton1Clicked, isButton2Clicked, isButton3Clicked, fR.result(1), fR.result(2), fR.result(3), fR.result(4), fR.result(5), fR.result(6), (int)fR.result(7), (int)fR.result(8), (int)fR.result(9), (int)fR.result(10), (int)fR.result(11), (int)fR.result(12), (int)fR.result(13), (int)fR.result(14), (int)fR.result(15), fR.result(17), fR.result(18), fR.result(19), ((int)fR.result(22) && !(int)fR.result(23)) || (!(int)fR.result(22) && !(int)fR.result(23)), touchpad, sw.elapsedMilliseconds(), wc.hInstance);
 	if (rInput.isAlphabeticKeyDown((int)fR.result(10)) && !lisButton1Clicked && gear < 7) {
 		lisButton1Clicked = true;
 		gear++;
@@ -153,6 +594,24 @@ void updateCode() {
 	isButton1Clicked = false;
 	isButton2Clicked = false;
 }
+BOOL HandleTouchpad(LPARAM* lParam) {
+    if (!touchpad)
+        return false;
+
+    HRAWINPUT hInput = (HRAWINPUT)*lParam;
+    RAWINPUTHEADER hdr = GetRawInputHeader(hInput);
+    if (hdr.dwType != RIM_TYPEHID)
+        return false;
+    device_info& dev = GetDeviceInfo(hdr.hDevice);
+    malloc_ptr<RAWINPUT> input = GetRawInput(hInput, hdr);
+    std::vector<contact> contacts = GetContacts(dev, input.get());
+
+    for (const contact& contact : contacts) {
+        //HandleCalibration(contact.point.x, contact.point.y);
+        printf("%d %d \n", contact.point.x, contact.point.y);
+    }
+    return true;
+}
 //Creates callback on window, registers raw input devices and processes mouse and keyboard input
 LRESULT CALLBACK WndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
@@ -160,48 +619,54 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 	{
 	case WM_CREATE:
 		//Creating new raw input devices
-			RAWINPUTDEVICE m_Rid[2];
-			//Keyboard
-			m_Rid[0].usUsagePage = 1;
-			m_Rid[0].usUsage = 6;
-			m_Rid[0].dwFlags = RIDEV_INPUTSINK;
-			m_Rid[0].hwndTarget = hwnd;
-			//Mouse
-			m_Rid[1].usUsagePage = 1;
-			m_Rid[1].usUsage = 2;
-			m_Rid[1].dwFlags = RIDEV_INPUTSINK;
-			m_Rid[1].hwndTarget = hwnd;
-			RegisterRawInputDevices(m_Rid, 2, sizeof(RAWINPUTDEVICE));
-
+		RAWINPUTDEVICE m_Rid[3];
+		//Keyboard
+		m_Rid[0].usUsagePage = 1;
+		m_Rid[0].usUsage = 6;
+		m_Rid[0].dwFlags = RIDEV_INPUTSINK;
+		m_Rid[0].hwndTarget = hwnd;
+		//Mouse
+		m_Rid[1].usUsagePage = 1;
+		m_Rid[1].usUsage = 2;
+		m_Rid[1].dwFlags = RIDEV_INPUTSINK;
+		m_Rid[1].hwndTarget = hwnd;
+        //Touchpad
+        m_Rid[2].usUsagePage = HID_USAGE_PAGE_DIGITIZER;
+        m_Rid[2].usUsage = HID_USAGE_DIGITIZER_TOUCH_PAD;
+        m_Rid[2].dwFlags = RIDEV_INPUTSINK;
+        m_Rid[2].hwndTarget = hwnd;
+		RegisterRawInputDevices(m_Rid, 3, sizeof(RAWINPUTDEVICE));
 		break;
 	case WM_INPUT:
 		//When window recives input message get data for rinput device and run mouse logic function.
-			rInput.getData(lParam);
-			if ((int)fR.result(22) && !(int)fR.result(23)) {
-				if (rInput.isMouseWheelUp())isButton1Clicked = true;
-				if (rInput.isMouseWheelDown())isButton2Clicked = true;
-				if (rInput.isMiddleMouseButtonDown() && !pgear) {
-					pgear = gear;
-					gear = 0;
-				}
-				else if (!rInput.isMiddleMouseButtonDown() && pgear) {
-					gear = pgear;
-					pgear = 0;
-				}
-				if (rInput.isMiddleMouseButtonDown()) {
-					if (rInput.isMouseWheelUp() && pgear < 7) pgear++;
-					if (rInput.isMouseWheelDown() && pgear > -1) pgear--;
-				}
-				else {
-					if (rInput.isMouseWheelUp() && gear < 7) gear++;
-					if (rInput.isMouseWheelDown() && gear > -1) gear--;
-				}
+        if (HandleTouchpad(&lParam))
+            break;
+        rInput.getData(lParam);
+		if ((int)fR.result(22) && !(int)fR.result(23)) {
+			if (rInput.isMouseWheelUp())isButton1Clicked = true;
+			if (rInput.isMouseWheelDown())isButton2Clicked = true;
+			if (rInput.isMiddleMouseButtonDown() && !pgear) {
+				pgear = gear;
+				gear = 0;
 			}
-			else if ((int)fR.result(23)) {
-				if (rInput.isMouseWheelUp() && axisY <= 32767) axisY += 32767 / (int)fR.result(23);
-				if (rInput.isMouseWheelDown() && axisY > 0) axisY -= 32767 / (int)fR.result(23);
+			else if (!rInput.isMiddleMouseButtonDown() && pgear) {
+				gear = pgear;
+				pgear = 0;
 			}
-			mTV.mouseLogic(rInput, axisX, fR.result(0), fR.result(20), (int)fR.result(16), isButton1Clicked, isButton2Clicked, (int)fR.result(22));
+			if (rInput.isMiddleMouseButtonDown()) {
+				if (rInput.isMouseWheelUp() && pgear < 7) pgear++;
+				if (rInput.isMouseWheelDown() && pgear > -1) pgear--;
+			}
+			else {
+				if (rInput.isMouseWheelUp() && gear < 7) gear++;
+				if (rInput.isMouseWheelDown() && gear > -1) gear--;
+			}
+		}
+		else if ((int)fR.result(23)) {
+			if (rInput.isMouseWheelUp() && axisY <= 32767) axisY += 32767 / (int)fR.result(23);
+			if (rInput.isMouseWheelDown() && axisY > 0) axisY -= 32767 / (int)fR.result(23);
+		}
+		mTV.mouseLogic(rInput, axisX, fR.result(0), fR.result(20), (int)fR.result(16), isButton1Clicked, isButton2Clicked, (int)fR.result(22));
 		break;
 	case WM_CLOSE:
 		PostQuitMessage(0);

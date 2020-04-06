@@ -22,7 +22,7 @@ AccelerationThrottle = 1.01
 AccelerationBreak = 1.01
 AccelerationClutch = 1.01
 CenterMultiplier = 2
-
+Touchpad = 0
 
 Use keycodes from 0 TO 165
 http://keycode.info
