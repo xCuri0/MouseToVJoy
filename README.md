@@ -21,6 +21,9 @@ Useful for racing games, created especially for Assetto Corsa to remove traction
 Some games I tested it with: Assetto Corsa, Live For Speed, Rfactor.
 
 ## Release History
+* 1.84
+	* FIX: High latency
+	* ADD: Option to use touchpad as Z and RX axis
 * 1.83
 	* FIX: Scroll wheel issues.
 	* ADD: `Use Wheel As Throttle`. Set UseWheelAsThrottle to the number of steps to use (0 to disable).
