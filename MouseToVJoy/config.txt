@@ -23,6 +23,8 @@ AccelerationBreak = 1.01
 AccelerationClutch = 1.01
 CenterMultiplier = 2
 Touchpad = 0
+TouchpadXInvert = 0
+TouchpadYInvert = 0
 
 Use keycodes from 0 TO 165
 http://keycode.info

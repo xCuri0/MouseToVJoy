@@ -573,7 +573,7 @@ void initializationCode() {
 	SetConsoleCtrlHandler((PHANDLER_ROUTINE)(exitHandler), TRUE);//Set the exit handler
 	string configFileName = "config.txt";
 	//what strings to look for in config file.
-	string checkArray[25] = { "Sensitivity", "AttackTimeThrottle", "ReleaseTimeThrottle", "AttackTimeBreak", "ReleaseTimeBreak", "AttackTimeClutch", "ReleaseTimeClutch", "ThrottleKey", "BreakKey", "ClutchKey", "GearShiftUpKey", "GearShiftDownKey", "HandBrakeKey", "MouseLockKey", "MouseCenterKey", "UseMouse","UseCenterReduction" , "AccelerationThrottle", "AccelerationBreak", "AccelerationClutch", "CenterMultiplier", "UseForceFeedback", "UseWheelAsShifter", "UseWheelAsThrottle", "Touchpad" };
+	string checkArray[27] = { "Sensitivity", "AttackTimeThrottle", "ReleaseTimeThrottle", "AttackTimeBreak", "ReleaseTimeBreak", "AttackTimeClutch", "ReleaseTimeClutch", "ThrottleKey", "BreakKey", "ClutchKey", "GearShiftUpKey", "GearShiftDownKey", "HandBrakeKey", "MouseLockKey", "MouseCenterKey", "UseMouse","UseCenterReduction" , "AccelerationThrottle", "AccelerationBreak", "AccelerationClutch", "CenterMultiplier", "UseForceFeedback", "UseWheelAsShifter", "UseWheelAsThrottle", "Touchpad", "TouchpadXInvert", "TouchpadYInvert" };
 	fR.newFile(configFileName, checkArray);//read configFileName and look for checkArray
 	for (int i = 7; i <= 14; i++)
 		if ((int)fR.result(i) == 17) {
@@ -678,8 +678,14 @@ BOOL HandleTouchpad(LPARAM* lParam) {
     double x = ((double)contact.point.x - bounds.left) / ((double)bounds.right - bounds.left);
     double y = ((double)contact.point.y - bounds.top) / ((double)bounds.bottom - bounds.top);
 
-    axisZ = (INT)round(x * 32767);
-    axisRX = (INT)round(y * 32767);
+    if ((int)fR.result(25))
+        axisZ = 32767 - (INT)round(x * 32767);
+    else
+        axisZ = (INT)round(x * 32767);
+    if ((int)fR.result(26))
+        axisRX = 32767 - (INT)round(y * 32767);
+    else
+        axisRX = (INT)round(y * 32767);
 
     return true;
 }
