@@ -585,6 +585,7 @@ void initializationCode() {
 		printf("Found precision touchpad, using it for axis Z and RX\n");
         ReadCalibration();
 		touchpad = true;
+        printf("Make sure your touchpad is set to disabled while mouse connected so it doesn't interfere with mouse input\n");
 	}
 	else if ((int)fR.result(24)) {
 		printf("Could not find precision touchpad\n");
@@ -618,6 +619,8 @@ void initializationCode() {
 	printf("Acceleration Break = %.2f \n", fR.result(18));
 	printf("Acceleration Clutch = %.2f \n", fR.result(19));
 	printf("Center Multiplier = %.2f \n", fR.result(20));
+    printf("Touchpad X Invert = %d \n", (INT)fR.result(25));
+    printf("Touchpad Y Invert = %d \n", (INT)fR.result(26));
 	printf("==================================\n");
 	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 }
