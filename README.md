@@ -268,6 +268,27 @@ Lesser then 1 to make center more sensitive while making ends less sensitive.
 
 E.g. CenterMultiplier = 1.20  
 
+### Touchpad
+
+Use Touchpad for Z and RX axis. Requires precision touchpad drivers which can usually be installed if your laptop didn't come with them.
+0 to Disable and 1 to Enable.
+
+## TouchpadXInvert
+Invert the touchpad X axis
+0 to Disable and 1 to Enable.
+
+## TouchpadYInvert
+Invert the touchpad Y axis
+0 to Disable and 1 to Enable.
+
+## TouchpadXPercent
+Percentage of touchpad X axis to use.
+etc 100 for full and 50 for half
+
+## TouchpadYPercent
+Percentage of touchpad Y axis to use.
+etc 100 for full and 50 for half
+
 ## Meta
 
 Sebastian Waluś – sebastian.walus@op.pl

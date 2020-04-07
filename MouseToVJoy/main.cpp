@@ -36,6 +36,7 @@ Stopwatch sw;//Measuring time in nanoseconds
 INT axisX, axisY, axisZ, axisRX, gear, pgear, ffbStrength; //Local variables that stores all axis values and forcefeedback strength we need.
 BOOL isButton1Clicked, isButton2Clicked, isButton3Clicked, lisButton1Clicked, lisButton2Clicked, ctrlDown, touchpad; //Bools that stores information if button was pressed.
 RECT bounds = { -1, -1, -1, -1 };
+double xpmul, ypmul;
 
 // Contact information parsed from the HID report descriptor.
 struct contact_info
@@ -573,7 +574,7 @@ void initializationCode() {
 	SetConsoleCtrlHandler((PHANDLER_ROUTINE)(exitHandler), TRUE);//Set the exit handler
 	string configFileName = "config.txt";
 	//what strings to look for in config file.
-	string checkArray[27] = { "Sensitivity", "AttackTimeThrottle", "ReleaseTimeThrottle", "AttackTimeBreak", "ReleaseTimeBreak", "AttackTimeClutch", "ReleaseTimeClutch", "ThrottleKey", "BreakKey", "ClutchKey", "GearShiftUpKey", "GearShiftDownKey", "HandBrakeKey", "MouseLockKey", "MouseCenterKey", "UseMouse","UseCenterReduction" , "AccelerationThrottle", "AccelerationBreak", "AccelerationClutch", "CenterMultiplier", "UseForceFeedback", "UseWheelAsShifter", "UseWheelAsThrottle", "Touchpad", "TouchpadXInvert", "TouchpadYInvert" };
+	string checkArray[29] = { "Sensitivity", "AttackTimeThrottle", "ReleaseTimeThrottle", "AttackTimeBreak", "ReleaseTimeBreak", "AttackTimeClutch", "ReleaseTimeClutch", "ThrottleKey", "BreakKey", "ClutchKey", "GearShiftUpKey", "GearShiftDownKey", "HandBrakeKey", "MouseLockKey", "MouseCenterKey", "UseMouse","UseCenterReduction" , "AccelerationThrottle", "AccelerationBreak", "AccelerationClutch", "CenterMultiplier", "UseForceFeedback", "UseWheelAsShifter", "UseWheelAsThrottle", "Touchpad", "TouchpadXInvert", "TouchpadYInvert", "TouchpadXPercent", "TouchpadYPercent" };
 	fR.newFile(configFileName, checkArray);//read configFileName and look for checkArray
 	for (int i = 7; i <= 14; i++)
 		if ((int)fR.result(i) == 17) {
@@ -593,6 +594,8 @@ void initializationCode() {
     else {
         printf("Touchpad disabled\n");
     }
+    xpmul = 1 / ((INT)fR.result(27) == 0 ? 1 : fR.result(27) / 100);
+    ypmul = 1 / ((INT)fR.result(28) == 0 ? 1 : fR.result(28) / 100);
 	//Printing basic menu with assigned values
 	printf("==================================\n");
 	printf("Sensitivity = %.2f \n", fR.result(0));
@@ -621,6 +624,8 @@ void initializationCode() {
 	printf("Center Multiplier = %.2f \n", fR.result(20));
     printf("Touchpad X Invert = %d \n", (INT)fR.result(25));
     printf("Touchpad Y Invert = %d \n", (INT)fR.result(26));
+    printf("Touchpad X Percent = %.0f \n", (1 / xpmul) * 100);
+    printf("Touchpad Y Percent = %.0f \n", (1 / ypmul) * 100);
 	printf("==================================\n");
 	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 }
@@ -682,13 +687,13 @@ BOOL HandleTouchpad(LPARAM* lParam) {
     double y = ((double)contact.point.y - bounds.top) / ((double)bounds.bottom - bounds.top);
 
     if ((int)fR.result(25))
-        axisZ = 32767 - (INT)round(x * 32767);
+        axisZ = (INT)round(((1 - x) * xpmul) * 32767);
     else
-        axisZ = (INT)round(x * 32767);
+        axisZ = (INT)round((x * xpmul) * 32767);
     if ((int)fR.result(26))
-        axisRX = 32767 - (INT)round(y * 32767);
+        axisRX = (INT)round(((1 - y) * ypmul) * 32767);
     else
-        axisRX = (INT)round(y * 32767);
+        axisRX = (INT)round((y * ypmul) * 32767);
 
     return true;
 }
