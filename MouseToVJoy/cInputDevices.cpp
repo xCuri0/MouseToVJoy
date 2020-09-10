@@ -1,6 +1,6 @@
 #include "input.h"
 #include <iostream>
-void CInputDevices::getData(LPARAM lParam)
+void CInputDevices::getData(LPARAM lParam, bool touchpad)
 {
 	// Determine how big the buffer should be
 	UINT bufferSize;
@@ -14,6 +14,15 @@ void CInputDevices::getData(LPARAM lParam)
 
 	RAWINPUT *raw = (RAWINPUT*)_buffer;
 
+	// Prevent touchpad interfere
+	if (touchpad && !raw->header.hDevice) {
+		_mouseXChange = 0;
+		_mouseYChange = 0;
+		_mouseZChange = 0;
+		_isMouseWheelUp = false;
+		_isMouseWheelDown = false;
+		return;
+	}
 	// The mouse has not been tested extensively,
 	// but I believe it works.
 	_mouseXChange = raw->data.mouse.lLastX;

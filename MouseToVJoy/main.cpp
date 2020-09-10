@@ -726,7 +726,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 		//When window recives input message get data for rinput device and run mouse logic function.
         if (HandleTouchpad(&lParam))
             break;
-        rInput.getData(lParam);
+        rInput.getData(lParam, touchpad);
 		if ((int)fR.result(22) && !(int)fR.result(23)) {
 			if (rInput.isMouseWheelUp())isButton1Clicked = true;
 			if (rInput.isMouseWheelDown())isButton2Clicked = true;
