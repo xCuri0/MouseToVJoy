@@ -3,11 +3,6 @@
 #include <math.h>
 #define STEERING_MAX 16384
 #define STEERING_MIN -16384
-
-LRESULT CALLBACK mouseHook(int nCode, WPARAM wParam, LPARAM lParam) {
-	return 1;
-}
-
 //Function responsible for getting and modifying vars for throttle, break, clutch.
 void MouseToVjoy::inputLogic(CInputDevices input, INT &axisX, INT &axisY, INT &axisZ, INT &axisRX, BOOL &isButton1Clicked, BOOL &isButton2Clicked, BOOL &isButton3Clicked, DOUBLE attackTimeThrottle, DOUBLE releaseTimeThrottle, DOUBLE attackTimeBreak, DOUBLE releaseTimeBreak, DOUBLE attackTimeClutch, DOUBLE releaseTimeClutch, INT throttleKey, INT breakKey, INT clutchKey, INT gearShiftUpKey, INT gearShiftDownKey, INT handBrakeKey, INT mouseLockKey, INT mouseCenterKey, INT useMouse, DOUBLE accelerationThrottle, DOUBLE accelerationBreak, DOUBLE accelerationClutch, BOOL useWheelAsShifter, BOOL touchpad, DOUBLE deltaTime, HINSTANCE hInstance) {
 	if (useMouse == 1) {
@@ -41,7 +36,7 @@ void MouseToVjoy::inputLogic(CInputDevices input, INT &axisX, INT &axisY, INT &a
 			axisRX = (int)((axisRX - (releaseTimeClutch == 0 ? 32767 : (releaseTimeClutch * deltaTime))) / accelerationClutch);
 	}
 	if (input.isAlphabeticKeyDown(mouseLockKey) && input.isAlphabeticKeyDown(17) && input.isAlphabeticKeyDown(18) || hInstance == NULL) {
-		if (!hMouseHook && !lastDown && hInstance != NULL) {
+		if (!_isCursorLocked && !lastDown && hInstance != NULL) {
 			// Set cursor to blank but first save the current one so we can restore it.
 			BYTE cura[] = { 0xFF };
 			BYTE curx[] = { 0x00 };
@@ -50,13 +45,12 @@ void MouseToVjoy::inputLogic(CInputDevices input, INT &axisX, INT &axisY, INT &a
 			GetCursorPos(&cursorPos);
 			SetSystemCursor(blankCursor, 32512);
 			DestroyCursor(blankCursor);
-			hMouseHook = SetWindowsHookEx(WH_MOUSE_LL, mouseHook, hInstance, 0);
+			_isCursorLocked = true;
 		}
-		else if ((!lastDown || hInstance == NULL) && hMouseHook) {
-			UnhookWindowsHookEx(hMouseHook);
-			SetCursorPos(cursorPos.x, cursorPos.y);
+		else if ((!lastDown || hInstance == NULL) && _isCursorLocked) {
 			SetSystemCursor(origCursor, 32512);
-			hMouseHook = 0;
+			SetCursorPos(cursorPos.x, cursorPos.y);
+			_isCursorLocked = false;
 		}
 		lastDown = true;
 	}
@@ -69,6 +63,9 @@ void MouseToVjoy::inputLogic(CInputDevices input, INT &axisX, INT &axisY, INT &a
 	isButton1Clicked = input.isAlphabeticKeyDown(gearShiftUpKey) || isButton1Clicked;
 	isButton2Clicked = input.isAlphabeticKeyDown(gearShiftDownKey) || isButton2Clicked;
 	isButton3Clicked = input.isAlphabeticKeyDown(handBrakeKey);
+
+	if (_isCursorLocked)
+		SetCursorPos(0, 0);
 }
 //Function responsible for getting and modifying vars for steering wheel.
 void MouseToVjoy::mouseLogic(CInputDevices input, INT &X, DOUBLE sensitivity, DOUBLE sensitivityCenterReduction, INT useCenterReduction, BOOL &isButton1Clicked, BOOL &isButton2Clicked, INT useWheelAsShifter){
