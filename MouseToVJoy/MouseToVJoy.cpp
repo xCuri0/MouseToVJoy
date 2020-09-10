@@ -35,7 +35,7 @@ void MouseToVjoy::inputLogic(CInputDevices input, INT &axisX, INT &axisY, INT &a
 		if (!input.isAlphabeticKeyDown(clutchKey) && axisRX > 1)
 			axisRX = (int)((axisRX - (releaseTimeClutch == 0 ? 32767 : (releaseTimeClutch * deltaTime))) / accelerationClutch);
 	}
-	if (input.isAlphabeticKeyDown(mouseLockKey) && input.isAlphabeticKeyDown(17) && input.isAlphabeticKeyDown(18) || hInstance == NULL) {
+	if (input.isAlphabeticKeyDown(mouseLockKey) && input.isAlphabeticKeyDown(18) || hInstance == NULL) {
 		if (!_isCursorLocked && !lastDown && hInstance != NULL) {
 			// Set cursor to blank but first save the current one so we can restore it.
 			BYTE cura[] = { 0xFF };
