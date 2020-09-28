@@ -3,7 +3,7 @@
 void CInputDevices::getData(LPARAM lParam, bool touchpad)
 {
 	// Determine how big the buffer should be
-	UINT bufferSize;
+	UINT bufferSize = 0;
 	GetRawInputData((HRAWINPUT)lParam, RID_INPUT, NULL, &bufferSize, sizeof(RAWINPUTHEADER));
 
 	// Create a buffer of the correct size - but see note below

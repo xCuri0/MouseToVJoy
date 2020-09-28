@@ -25,6 +25,8 @@ CenterMultiplier = 2
 Touchpad = 0
 TouchpadXInvert = 0
 TouchpadYInvert = 0
+TouchpadXStartPercent = 20
+TouchpadYStartPercent = 30
 TouchpadXPercent = 100
 TouchpadYPercent = 100
 

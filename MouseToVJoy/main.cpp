@@ -574,7 +574,7 @@ void initializationCode() {
 	SetConsoleCtrlHandler((PHANDLER_ROUTINE)(exitHandler), TRUE);//Set the exit handler
 	string configFileName = "config.txt";
 	//what strings to look for in config file.
-	string checkArray[29] = { "Sensitivity", "AttackTimeThrottle", "ReleaseTimeThrottle", "AttackTimeBreak", "ReleaseTimeBreak", "AttackTimeClutch", "ReleaseTimeClutch", "ThrottleKey", "BreakKey", "ClutchKey", "GearShiftUpKey", "GearShiftDownKey", "HandBrakeKey", "MouseLockKey", "MouseCenterKey", "UseMouse","UseCenterReduction" , "AccelerationThrottle", "AccelerationBreak", "AccelerationClutch", "CenterMultiplier", "UseForceFeedback", "UseWheelAsShifter", "UseWheelAsThrottle", "Touchpad", "TouchpadXInvert", "TouchpadYInvert", "TouchpadXPercent", "TouchpadYPercent" };
+	string checkArray[31] = { "Sensitivity", "AttackTimeThrottle", "ReleaseTimeThrottle", "AttackTimeBreak", "ReleaseTimeBreak", "AttackTimeClutch", "ReleaseTimeClutch", "ThrottleKey", "BreakKey", "ClutchKey", "GearShiftUpKey", "GearShiftDownKey", "HandBrakeKey", "MouseLockKey", "MouseCenterKey", "UseMouse","UseCenterReduction" , "AccelerationThrottle", "AccelerationBreak", "AccelerationClutch", "CenterMultiplier", "UseForceFeedback", "UseWheelAsShifter", "UseWheelAsThrottle", "Touchpad", "TouchpadXInvert", "TouchpadYInvert", "TouchpadXPercent", "TouchpadYPercent", "TouchpadXStartPercent", "TouchpadYStartPercent" };
 	fR.newFile(configFileName, checkArray);//read configFileName and look for checkArray
 	for (int i = 7; i <= 14; i++)
 		if ((int)fR.result(i) == 17) {
@@ -624,6 +624,8 @@ void initializationCode() {
 	printf("Center Multiplier = %.2f \n", fR.result(20));
     printf("Touchpad X Invert = %d \n", (INT)fR.result(25));
     printf("Touchpad Y Invert = %d \n", (INT)fR.result(26));
+    printf("Touchpad X Start = %d \n", (INT)fR.result(29));
+    printf("Touchpad Y Start = %d \n", (INT)fR.result(30));
     printf("Touchpad X Percent = %.0f \n", (1 / xpmul) * 100);
     printf("Touchpad Y Percent = %.0f \n", (1 / ypmul) * 100);
 	printf("==================================\n");
@@ -665,6 +667,7 @@ BOOL HandleTouchpad(LPARAM* lParam) {
     if (!touchpad)
         return false;
 
+    double _axisZ, _axisRX, x, y, ystart, xstart;
     HRAWINPUT hInput = (HRAWINPUT)*lParam;
     RAWINPUTHEADER hdr = GetRawInputHeader(hInput);
     if (hdr.dwType != RIM_TYPEHID)
@@ -682,19 +685,36 @@ BOOL HandleTouchpad(LPARAM* lParam) {
     for (const contact& contact : contacts) {
         HandleCalibration(contact.point.x, contact.point.y);
     }
-    contact contact = GetPrimaryContact(contacts);
-    double x = ((double)contact.point.x - bounds.left) / ((double)bounds.right - bounds.left);
-    double y = ((double)contact.point.y - bounds.top) / ((double)bounds.bottom - bounds.top);
 
-    if ((int)fR.result(25))
-        axisZ = (INT)round(((1 - x) * xpmul) * 32767);
-    else
-        axisZ = (INT)round((x * xpmul) * 32767);
-    if ((int)fR.result(26))
-        axisRX = (INT)round(((1 - y) * ypmul) * 32767);
-    else
-        axisRX = (INT)round((y * ypmul) * 32767);
+    axisRX = -1;
+    axisZ = -1;
+    ystart = (INT)fR.result(29) / 100;
+    xstart = (INT)fR.result(30) / 100;
+    for (const contact& contact : contacts) {
+        x = ((double)contact.point.x - bounds.left) / ((double)bounds.right - bounds.left);
+        y = ((double)contact.point.y - bounds.top) / ((double)bounds.bottom - bounds.top);
 
+        if ((int)fR.result(25))
+            _axisZ = (INT)round(((1 - x) * xpmul) * 32767);
+        else
+            _axisZ = (INT)round((x * xpmul) * 32767);
+        if ((int)fR.result(26))
+            _axisRX = (INT)round(((1 - y) * ypmul) * 32767);
+        else
+            _axisRX = (INT)round((y * ypmul) * 32767);
+
+        if (_axisRX > (32767 * ystart) && axisRX == -1)
+            axisRX = int((_axisRX - (32767 * ystart)) / (1 - ystart));
+
+        if (_axisZ > (32767 * xstart) && axisZ == -1)
+            axisZ = (int)((_axisZ - (32767 * xstart)) / (1 - xstart));
+
+    }
+
+    if (axisRX == -1)
+        axisRX = 0;
+    if (axisZ == -1)
+        axisZ = 0;
     return true;
 }
 //Creates callback on window, registers raw input devices and processes mouse and keyboard input
@@ -755,15 +775,17 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_CLOSE:
 		PostQuitMessage(0);
+        break;
 	case WM_DESTROY:
 		DestroyWindow(hwnd);
+        break;
 	default:
 		return DefWindowProc(hwnd, Msg, wParam, lParam);
 	}
 	return 0;
 }
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nCmdShow)
 {
 	//invisible window initialization to be able to recive raw input even if the window is not focused.
 	static const char* class_name = "DUMMY_CLASS";
@@ -779,6 +801,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	if (cmdLine != "-noconsole") {
 		AllocConsole();
 		#pragma warning(disable:4996)
+        #pragma warning(disable:6031)
 		freopen("CONOUT$", "w", stdout);
 		freopen("CONIN$", "r", stdin);
 		ios::sync_with_stdio();

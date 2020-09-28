@@ -6,12 +6,12 @@ using namespace std;
 struct FFBSIZE {
 private:
 	//Forcefeedback data
-	string _effectTypeStr;
-	int _magnitudeVar;
-	int _directionVar;
-	int _offsetVar;
-	int _periodVar;
-	int _durationVar;
+	string _effectTypeStr = "";
+	int _magnitudeVar = 0;
+	int _directionVar = 0;
+	int _offsetVar = 0;
+	int _periodVar = 0;
+	int _durationVar = 0;
 public:
 	//fuctions that returns forcefeedback data
 	string getEffectType() { return _effectTypeStr; }
