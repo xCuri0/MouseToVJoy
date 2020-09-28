@@ -289,15 +289,25 @@ etc 100 for full and 50 for half
 Percentage of touchpad Y axis to use.
 etc 100 for full and 50 for half
 
+## TouchpadXStartPercent
+Percentage of touchpad X axis to start at.
+
+## TouchpadYStartPercent
+Percentage of touchpad Y axis to start at.
+
 ## Meta
 
 Sebastian Waluś – sebastian.walus@op.pl
 
 [https://github.com/R1per/github-link](https://github.com/R1per/)
 
+xCuri0 - zkqri0@gmail.com
+
+[https://github.com/xCuri0/github-link](https://github.com/xCuri0/)
+
 ## Contributing
 
-1. Fork it (<https://github.com/R1PeR/MouseToVJoy/fork>)
+1. Fork it (<https://github.com/xCuri0/MouseToVJoy/fork>)
 2. Create your feature branch (`git checkout -b feature/fooBar`)
 3. Commit your changes (`git commit -am 'Add some fooBar'`)
 4. Push to the branch (`git push origin feature/fooBar`)
@@ -310,6 +320,6 @@ Sebastian Waluś – sebastian.walus@op.pl
 * [VjoyInterface](http://vjoystick.sourceforge.net/site/) - Virtual Joystick Comminucation Library
 
 ## Acknowledgments
-
+* Sebastian Waluś for the orignal MouseToVJoy
 * Hat tip to anyone who's code was used
 
