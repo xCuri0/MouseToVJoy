@@ -688,8 +688,8 @@ BOOL HandleTouchpad(LPARAM* lParam) {
 
     axisRX = -1;
     axisZ = -1;
-    ystart = (INT)fR.result(29) / 100;
-    xstart = (INT)fR.result(30) / 100;
+    ystart = (double)fR.result(29) / 100;
+    xstart = (double)fR.result(30) / 100;
     for (const contact& contact : contacts) {
         x = ((double)contact.point.x - bounds.left) / ((double)bounds.right - bounds.left);
         y = ((double)contact.point.y - bounds.top) / ((double)bounds.bottom - bounds.top);
@@ -703,11 +703,11 @@ BOOL HandleTouchpad(LPARAM* lParam) {
         else
             _axisRX = (INT)round((y * ypmul) * 32767);
 
-        if (_axisRX > (32767 * ystart) && axisRX == -1)
-            axisRX = int((_axisRX - (32767 * ystart)) / (1 - ystart));
+        if (_axisRX > (32767 * xstart) && axisRX == -1)
+            axisRX = int((_axisRX - (32767 * xstart)) / (1 - xstart));
 
-        if (_axisZ > (32767 * xstart) && axisZ == -1)
-            axisZ = (int)((_axisZ - (32767 * xstart)) / (1 - xstart));
+        if (_axisZ > (32767 * ystart) && axisZ == -1)
+            axisZ = (int)((_axisZ - (32767 * ystart)) / (1 - ystart));
 
     }
 
