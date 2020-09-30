@@ -21,6 +21,12 @@ Useful for racing games, created especially for Assetto Corsa to remove traction
 Some games I tested it with: Assetto Corsa, Live For Speed, Rfactor.
 
 ## Release History
+* 1.85
+	* ADD: Using two fingers on touchpad
+	* ADD: Require ALT for mouse lock key
+	* ADD: TouchpadXStartPercent and TouchpadYStartPercent
+	* ADD: TouchpadXPercent and TouchpadYPercent
+	* FIX: Touchpad interference with mouse
 * 1.84
 	* FIX: High latency
 	* ADD: Option to use touchpad as Z and RX axis
