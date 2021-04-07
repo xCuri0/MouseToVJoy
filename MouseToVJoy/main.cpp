@@ -37,6 +37,8 @@ INT axisX, axisY, axisZ, axisRX, gear, pgear, ffbStrength; //Local variables tha
 BOOL isButton1Clicked, isButton2Clicked, isButton3Clicked, lisButton1Clicked, lisButton2Clicked, ctrlDown, touchpad; //Bools that stores information if button was pressed.
 RECT bounds = { -1, -1, -1, -1 };
 double xpmul, ypmul;
+//Gets if the Cursor is locked then, sets cursor in cords 0,0 every input.
+BOOL isCursorLocked;
 
 // Contact information parsed from the HID report descriptor.
 struct contact_info
@@ -126,7 +128,7 @@ LRESULT CALLBACK keyboardHook(int nCode, WPARAM wParam, LPARAM lParam) {
 }
 BOOL exitHandler(DWORD event) {
 	if (event == CTRL_CLOSE_EVENT) {
-		mTV.inputLogic(rInput, axisX, axisY, axisZ, axisRX, isButton1Clicked, isButton2Clicked, isButton3Clicked, fR.result(1), fR.result(2), fR.result(3), fR.result(4), fR.result(5), fR.result(6), (int)fR.result(7), (int)fR.result(8), (int)fR.result(9), (int)fR.result(10), (int)fR.result(11), (int)fR.result(12), (int)fR.result(13), (int)fR.result(14), (int)fR.result(15), fR.result(17), fR.result(18), fR.result(19), (int)fR.result(22), touchpad, sw.elapsedMilliseconds(), NULL);
+		mTV.inputLogic(rInput, axisX, axisY, axisZ, axisRX, isButton1Clicked, isButton2Clicked, isButton3Clicked, fR.result(1), fR.result(2), fR.result(3), fR.result(4), fR.result(5), fR.result(6), (int)fR.result(7), (int)fR.result(8), (int)fR.result(9), (int)fR.result(10), (int)fR.result(11), (int)fR.result(12), (int)fR.result(13), (int)fR.result(14), (int)fR.result(15), fR.result(17), fR.result(18), fR.result(19), (int)fR.result(22), touchpad, sw.elapsedMilliseconds(), (int)fR.result(31), isCursorLocked, NULL);
 		return true;
 	}
 	return false;
@@ -574,7 +576,7 @@ void initializationCode() {
 	SetConsoleCtrlHandler((PHANDLER_ROUTINE)(exitHandler), TRUE);//Set the exit handler
 	string configFileName = "config.txt";
 	//what strings to look for in config file.
-	string checkArray[31] = { "Sensitivity", "AttackTimeThrottle", "ReleaseTimeThrottle", "AttackTimeBreak", "ReleaseTimeBreak", "AttackTimeClutch", "ReleaseTimeClutch", "ThrottleKey", "BreakKey", "ClutchKey", "GearShiftUpKey", "GearShiftDownKey", "HandBrakeKey", "MouseLockKey", "MouseCenterKey", "UseMouse","UseCenterReduction" , "AccelerationThrottle", "AccelerationBreak", "AccelerationClutch", "CenterMultiplier", "UseForceFeedback", "UseWheelAsShifter", "UseWheelAsThrottle", "Touchpad", "TouchpadXInvert", "TouchpadYInvert", "TouchpadXPercent", "TouchpadYPercent", "TouchpadXStartPercent", "TouchpadYStartPercent" };
+	string checkArray[32] = { "Sensitivity", "AttackTimeThrottle", "ReleaseTimeThrottle", "AttackTimeBreak", "ReleaseTimeBreak", "AttackTimeClutch", "ReleaseTimeClutch", "ThrottleKey", "BreakKey", "ClutchKey", "GearShiftUpKey", "GearShiftDownKey", "HandBrakeKey", "MouseLockKey", "MouseCenterKey", "UseMouse","UseCenterReduction" , "AccelerationThrottle", "AccelerationBreak", "AccelerationClutch", "CenterMultiplier", "UseForceFeedback", "UseWheelAsShifter", "UseWheelAsThrottle", "Touchpad", "TouchpadXInvert", "TouchpadYInvert", "TouchpadXPercent", "TouchpadYPercent", "TouchpadXStartPercent", "TouchpadYStartPercent", "RequireLocked" };
 	fR.newFile(configFileName, checkArray);//read configFileName and look for checkArray
 	for (int i = 7; i <= 14; i++)
 		if ((int)fR.result(i) == 17) {
@@ -613,6 +615,7 @@ void initializationCode() {
 	printf("Hand Brake Key = %d \n", (int)fR.result(12));
 	printf("Mouse Lock key = %d \n", (int)fR.result(13));
 	printf("Mouse Center key = %d \n", (int)fR.result(14));
+    printf("Required Locked = %d \n", (int)fR.result(31));
 	printf("Use Mouse = %d \n", (int)fR.result(15));
 	printf("Use Center Reduction = %d \n", (int)fR.result(16));
 	printf("Use Force Feedback = %d \n", (int)fR.result(21));
@@ -635,33 +638,41 @@ void initializationCode() {
 //Update code is sleeping for 1 miliseconds to make is less cpu demanding
 void updateCode() {
 	Sleep(1);
-	if (fFB.getFfbSize().getEffectType() == "Constant") {
-		if (fFB.getFfbSize().getDirection() > 100)
-			ffbStrength = (int)((fFB.getFfbSize().getMagnitude()) * (sw.elapsedMilliseconds() * 0.001));
-		else
-			ffbStrength = (int)(-(fFB.getFfbSize().getMagnitude()) * (sw.elapsedMilliseconds() * 0.001));
-	}
-	if (fFB.getFfbSize().getEffectType() == "Period")
-		ffbStrength = (int)((fFB.getFfbSize().getOffset() * 0.5) * (sw.elapsedMilliseconds() * 0.001));
-	if (fR.result(21) == 1) {
-		axisX = axisX + ffbStrength;
-		ffbStrength = 0;
-	}
-	mTV.inputLogic(rInput, axisX, axisY, axisZ, axisRX, isButton1Clicked, isButton2Clicked, isButton3Clicked, fR.result(1), fR.result(2), fR.result(3), fR.result(4), fR.result(5), fR.result(6), (int)fR.result(7), (int)fR.result(8), (int)fR.result(9), (int)fR.result(10), (int)fR.result(11), (int)fR.result(12), (int)fR.result(13), (int)fR.result(14), (int)fR.result(15), fR.result(17), fR.result(18), fR.result(19), ((int)fR.result(22) && !(int)fR.result(23)) || (!(int)fR.result(22) && !(int)fR.result(23)), touchpad, sw.elapsedMilliseconds(), wc.hInstance);
-	if (rInput.isAlphabeticKeyDown((int)fR.result(10)) && !lisButton1Clicked && gear < 7) {
-		lisButton1Clicked = true;
-		gear++;
-	}
-	else
-		lisButton1Clicked = rInput.isAlphabeticKeyDown((int)fR.result(10));
-	if (rInput.isAlphabeticKeyDown((int)fR.result(11)) && !lisButton2Clicked && gear > -1) {
-		lisButton2Clicked = true;
-		gear--;
-	} else
-		lisButton2Clicked = rInput.isAlphabeticKeyDown((int)fR.result(11));
-	vJ.feedDevice(1, axisX, axisY, axisZ, axisRX, gear, isButton1Clicked, isButton2Clicked, isButton3Clicked);
-	isButton1Clicked = false;
-	isButton2Clicked = false;
+
+    if (((int)fR.result(31) != 0 && isCursorLocked) || (int)fR.result(31) == 0) {
+        if (fFB.getFfbSize().getEffectType() == "Constant") {
+            if (fFB.getFfbSize().getDirection() > 100)
+                ffbStrength = (int)((fFB.getFfbSize().getMagnitude()) * (sw.elapsedMilliseconds() * 0.001));
+            else
+                ffbStrength = (int)(-(fFB.getFfbSize().getMagnitude()) * (sw.elapsedMilliseconds() * 0.001));
+        }
+        if (fFB.getFfbSize().getEffectType() == "Period")
+            ffbStrength = (int)((fFB.getFfbSize().getOffset() * 0.5) * (sw.elapsedMilliseconds() * 0.001));
+        if (fR.result(21) == 1) {
+            axisX = axisX + ffbStrength;
+            ffbStrength = 0;
+        }
+        if (rInput.isAlphabeticKeyDown((int)fR.result(10)) && !lisButton1Clicked && gear < 7) {
+            lisButton1Clicked = true;
+            gear++;
+        }
+        else
+            lisButton1Clicked = rInput.isAlphabeticKeyDown((int)fR.result(10));
+        if (rInput.isAlphabeticKeyDown((int)fR.result(11)) && !lisButton2Clicked && gear > -1) {
+            lisButton2Clicked = true;
+            gear--;
+        }
+        else
+            lisButton2Clicked = rInput.isAlphabeticKeyDown((int)fR.result(11));
+    }
+    mTV.inputLogic(rInput, axisX, axisY, axisZ, axisRX, isButton1Clicked, isButton2Clicked, isButton3Clicked, fR.result(1), fR.result(2), fR.result(3), fR.result(4), fR.result(5), fR.result(6), (int)fR.result(7), (int)fR.result(8), (int)fR.result(9), (int)fR.result(10), (int)fR.result(11), (int)fR.result(12), (int)fR.result(13), (int)fR.result(14), (int)fR.result(15), fR.result(17), fR.result(18), fR.result(19), ((int)fR.result(22) && !(int)fR.result(23)) || (!(int)fR.result(22) && !(int)fR.result(23)), touchpad, sw.elapsedMilliseconds(), (int)fR.result(31), isCursorLocked, wc.hInstance);
+
+    if (((int)fR.result(31) != 0 && isCursorLocked) || (int)fR.result(31) == 0) {
+        vJ.feedDevice(1, axisX, axisY, axisZ, axisRX, gear, isButton1Clicked, isButton2Clicked, isButton3Clicked);
+        isButton1Clicked = false;
+        isButton2Clicked = false;
+    }
+
 }
 BOOL HandleTouchpad(LPARAM* lParam) {
     if (!touchpad)
@@ -747,6 +758,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam)
         if (HandleTouchpad(&lParam))
             break;
         rInput.getData(lParam, touchpad);
+        if ((int)fR.result(31) != 0 && !isCursorLocked)
+            break;
 		if ((int)fR.result(22) && !(int)fR.result(23)) {
 			if (rInput.isMouseWheelUp())isButton1Clicked = true;
 			if (rInput.isMouseWheelDown())isButton2Clicked = true;
