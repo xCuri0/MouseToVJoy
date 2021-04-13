@@ -571,7 +571,11 @@ void initializationCode() {
 	//Code that is run only once, tests vjoy device, reads config file and prints basic out accuired vars.
 	UINT DEV_ID = 1;
 	vJ.testDriver();//Test if driver is installed and compatible.
-	vJ.testVirtualDevices(DEV_ID);//Test if virtually created joystick is up and running.
+    //Test if virtually created joystick is up and running.
+    if (vJ.testVirtualDevices(DEV_ID)) {
+        system("pause");
+        exit(EXIT_FAILURE);
+    }
 	vJ.accuireDevice(DEV_ID);//Accuire virtual joystick of index number DEV_ID
 	SetConsoleCtrlHandler((PHANDLER_ROUTINE)(exitHandler), TRUE);//Set the exit handler
 	string configFileName = "config.txt";
