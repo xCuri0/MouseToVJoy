@@ -9,7 +9,7 @@ void FileRead::newFile(string fileName, string checkArray[]) {
 			double value;
 			char c;
 			ss >> tmp >> c >> value;
-			for(int i = 0; i < 32; i++){
+			for(int i = 0; i < 64; i++){
 				if (tmp == checkArray[i]) {
 					_resultArray[i] = value;
 				}

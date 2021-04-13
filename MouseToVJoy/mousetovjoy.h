@@ -11,7 +11,7 @@ public:
 	//Function responsible for getting and modifying vars for throttle, break, clutch.
 	void MouseToVjoy::inputLogic(CInputDevices input, INT &axisX, INT &axisY, INT &axisZ, INT &axisRX, BOOL &isButton1Clicked, BOOL &isButton2Clicked, BOOL &isButton3Clicked, DOUBLE attackTimeThrottle, DOUBLE releaseTimeThrottle, DOUBLE attackTimeBreak, DOUBLE releaseTimeBreak, DOUBLE attackTimeClutch, DOUBLE releaseTimeClutch, INT throttleKey, INT breakKey, INT clutchKey, INT gearShiftUpKey, INT gearShiftDownKey, INT handBrakeKey, INT mouseLockKey, INT mouseCenterKey, INT useMouse, DOUBLE accelerationThrottle, DOUBLE accelerationBreak, DOUBLE accelerationClutch, BOOL useWheelAsShifter, BOOL touchpad, DOUBLE deltaTime, BOOL requireLocked, BOOL &_isCursorLocked, HINSTANCE hInstance);
 	//Function responsible for getting and modifying vars for steering wheel.
-	void MouseToVjoy::mouseLogic(CInputDevices input, INT &axisX, DOUBLE sensitivity, DOUBLE sensitivityCenterReduction, INT useCenterReduction, BOOL &isButton1Clicked, BOOL &isButton2Clicked, INT useWheelAsShifter);
+	void MouseToVjoy::mouseLogic(INT change, INT &axisX, DOUBLE sensitivity, DOUBLE sensitivityCenterReduction, INT useCenterReduction);
 private:
 	//If cursor lock key was down last time
 	bool lastDown;
@@ -23,5 +23,8 @@ private:
 	HCURSOR origCursor;
 	//Original cursor position
 	POINT cursorPos;
+	//Blank cursor
+	HCURSOR blankCursor;
+	SHORT tick;
 };
 #endif

@@ -10,11 +10,11 @@ void MouseToVjoy::inputLogic(CInputDevices input, INT &axisX, INT &axisY, INT &a
 			// Set cursor to blank but first save the current one so we can restore it.
 			BYTE cura[] = { 0xFF };
 			BYTE curx[] = { 0x00 };
-			HCURSOR blankCursor = CreateCursor(hInstance, 0, 0, 1, 1, cura, curx);
+			if (!blankCursor)
+				blankCursor = CreateCursor(hInstance, 0, 0, 1, 1, cura, curx);
 			origCursor = CopyCursor(LoadCursor(0, IDC_ARROW));
 			GetCursorPos(&cursorPos);
-			SetSystemCursor(blankCursor, 32512);
-			DestroyCursor(blankCursor);
+			SetSystemCursor(CopyCursor(blankCursor), 32512);
 			isCursorLocked = true;
 		}
 		else if ((!lastDown || hInstance == NULL) && isCursorLocked) {
@@ -69,11 +69,18 @@ void MouseToVjoy::inputLogic(CInputDevices input, INT &axisX, INT &axisY, INT &a
 	isButton2Clicked = input.isAlphabeticKeyDown(gearShiftDownKey) || isButton2Clicked;
 	isButton3Clicked = input.isAlphabeticKeyDown(handBrakeKey);
 
-	if (isCursorLocked)
+	if (isCursorLocked) {
+		// only set cursor every second as it is expensive
+		if (tick == 1000) {
+			SetSystemCursor(CopyCursor(blankCursor), 32512);
+			tick = 0;
+		}
 		SetCursorPos(0, 0);
+		tick++;
+	}
 }
 //Function responsible for getting and modifying vars for steering wheel.
-void MouseToVjoy::mouseLogic(CInputDevices input, INT &X, DOUBLE sensitivity, DOUBLE sensitivityCenterReduction, INT useCenterReduction, BOOL &isButton1Clicked, BOOL &isButton2Clicked, INT useWheelAsShifter){
+void MouseToVjoy::mouseLogic(INT change, INT &X, DOUBLE sensitivity, DOUBLE sensitivityCenterReduction, INT useCenterReduction){
 	//vjoy max value is 0-32767 to make it easier to scale linear reduction/acceleration I subtract half of it so 16384 to make it -16384 to 16384.
 	X = X - 16384;
 	if (X > 0)
@@ -81,9 +88,9 @@ void MouseToVjoy::mouseLogic(CInputDevices input, INT &X, DOUBLE sensitivity, DO
 	else if(X < 0)
 		_centerMultiplier = pow(sensitivityCenterReduction, (1 - (double)((double)X / (double)STEERING_MIN)));
 	if (useCenterReduction == 1)
-		X = (int)(X + ((input.getMouseChangeX() * sensitivity) / _centerMultiplier));
+		X = (int)(X + ((change * sensitivity) / _centerMultiplier));
 	else
-		X = (int)(X + (input.getMouseChangeX() * sensitivity));
+		X = (int)(X + (change * sensitivity));
 
 	if (X > 16384)
 		X = 16384;

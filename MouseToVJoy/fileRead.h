@@ -27,6 +27,6 @@ public:
 	double result(int number) { return _resultArray[number]; };
 
 private:
-	double _resultArray[32];
+	double _resultArray[64];
 };
 #endif

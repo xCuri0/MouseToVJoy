@@ -98,31 +98,33 @@ LRESULT CALLBACK keyboardHook(int nCode, WPARAM wParam, LPARAM lParam) {
 	case WM_SYSKEYDOWN:
 	case WM_KEYUP:
 	case WM_SYSKEYUP:
-		PKBDLLHOOKSTRUCT p = (PKBDLLHOOKSTRUCT)(lParam);
-		USHORT vkCode = MapVirtualKey(p->scanCode, MAPVK_VSC_TO_VK);
-		if (vkCode == 17 && p->dwExtraInfo != 6969) {
-			ctrlDown = (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN);
-			for (int i = 7; i <= 14; i++) {
-				if ((rInput.isAlphabeticKeyDown((int)fR.result(i)) && (int)fR.result(i) != 17)) {
-					if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
-						rInput._isKeyboardButtonPressed[17] = true;
-						return 1;
-					}
-					else if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
-						rInput._isKeyboardButtonPressed[17] = false;
-						return 1;
-					}
-					break;
-				}
-			}
-		}
-		for (int i = 7; i <= 14; i++)
-			if ((int)fR.result(i) == vkCode && (int)fR.result(i) != 17 && (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) && ctrlDown) {
-				// Set the CTRL key to up and set dwExtraInfo to le funni number so we can ignore it
-				keybd_event(17, 0, KEYEVENTF_KEYUP, 6969);
-				break;
-			}
-		break;
+        if (((int)fR.result(31) != 0 && isCursorLocked) || (int)fR.result(31) == 0) {
+            PKBDLLHOOKSTRUCT p = (PKBDLLHOOKSTRUCT)(lParam);
+            USHORT vkCode = MapVirtualKey(p->scanCode, MAPVK_VSC_TO_VK);
+            if (vkCode == 17 && p->dwExtraInfo != 6969) {
+                ctrlDown = (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN);
+                for (int i = 7; i <= 14; i++) {
+                    if ((rInput.isAlphabeticKeyDown((int)fR.result(i)) && (int)fR.result(i) != 17)) {
+                        if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
+                            rInput._isKeyboardButtonPressed[17] = true;
+                            return 1;
+                        }
+                        else if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
+                            rInput._isKeyboardButtonPressed[17] = false;
+                            return 1;
+                        }
+                        break;
+                    }
+                }
+            }
+            for (int i = 7; i <= 14; i++)
+                if ((int)fR.result(i) == vkCode && (int)fR.result(i) != 17 && (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) && ctrlDown) {
+                    // Set the CTRL key to up and set dwExtraInfo to le funni number so we can ignore it
+                    keybd_event(17, 0, KEYEVENTF_KEYUP, 6969);
+                    break;
+                }
+            break;
+        }
 	}
 	return CallNextHookEx(NULL, nCode, wParam, lParam);
 }
@@ -576,7 +578,7 @@ void initializationCode() {
 	SetConsoleCtrlHandler((PHANDLER_ROUTINE)(exitHandler), TRUE);//Set the exit handler
 	string configFileName = "config.txt";
 	//what strings to look for in config file.
-	string checkArray[32] = { "Sensitivity", "AttackTimeThrottle", "ReleaseTimeThrottle", "AttackTimeBreak", "ReleaseTimeBreak", "AttackTimeClutch", "ReleaseTimeClutch", "ThrottleKey", "BreakKey", "ClutchKey", "GearShiftUpKey", "GearShiftDownKey", "HandBrakeKey", "MouseLockKey", "MouseCenterKey", "UseMouse","UseCenterReduction" , "AccelerationThrottle", "AccelerationBreak", "AccelerationClutch", "CenterMultiplier", "UseForceFeedback", "UseWheelAsShifter", "UseWheelAsThrottle", "Touchpad", "TouchpadXInvert", "TouchpadYInvert", "TouchpadXPercent", "TouchpadYPercent", "TouchpadXStartPercent", "TouchpadYStartPercent", "RequireLocked" };
+	string checkArray[33] = { "Sensitivity", "AttackTimeThrottle", "ReleaseTimeThrottle", "AttackTimeBreak", "ReleaseTimeBreak", "AttackTimeClutch", "ReleaseTimeClutch", "ThrottleKey", "BreakKey", "ClutchKey", "GearShiftUpKey", "GearShiftDownKey", "HandBrakeKey", "MouseLockKey", "MouseCenterKey", "UseMouse","UseCenterReduction" , "AccelerationThrottle", "AccelerationBreak", "AccelerationClutch", "CenterMultiplier", "UseForceFeedback", "UseWheelAsShifter", "UseWheelAsThrottle", "Touchpad", "TouchpadXInvert", "TouchpadYInvert", "TouchpadXPercent", "TouchpadYPercent", "TouchpadXStartPercent", "TouchpadYStartPercent", "RequireLocked", "ForceFeedbackKey"};
 	fR.newFile(configFileName, checkArray);//read configFileName and look for checkArray
 	for (int i = 7; i <= 14; i++)
 		if ((int)fR.result(i) == 17) {
@@ -619,6 +621,7 @@ void initializationCode() {
 	printf("Use Mouse = %d \n", (int)fR.result(15));
 	printf("Use Center Reduction = %d \n", (int)fR.result(16));
 	printf("Use Force Feedback = %d \n", (int)fR.result(21));
+    printf("Force Feedback Key = %d \n", (int)fR.result(32));
 	printf("Use Mouse Wheel As Shifter = %d \n", (int)fR.result(22));
 	printf("Use Mouse Wheel As Throttle = %d \n", (int)fR.result(23));
 	printf("Acceleration Throttle = %.2f \n", fR.result(17));
@@ -640,17 +643,19 @@ void updateCode() {
 	Sleep(1);
 
     if (((int)fR.result(31) != 0 && isCursorLocked) || (int)fR.result(31) == 0) {
-        if (fFB.getFfbSize().getEffectType() == "Constant") {
-            if (fFB.getFfbSize().getDirection() > 100)
-                ffbStrength = (int)((fFB.getFfbSize().getMagnitude()) * (sw.elapsedMilliseconds() * 0.001));
-            else
-                ffbStrength = (int)(-(fFB.getFfbSize().getMagnitude()) * (sw.elapsedMilliseconds() * 0.001));
-        }
-        if (fFB.getFfbSize().getEffectType() == "Period")
-            ffbStrength = (int)((fFB.getFfbSize().getOffset() * 0.5) * (sw.elapsedMilliseconds() * 0.001));
-        if (fR.result(21) == 1) {
-            axisX = axisX + ffbStrength;
-            ffbStrength = 0;
+        if (((int)fR.result(32) != 0 && rInput.isAlphabeticKeyDown((int)fR.result(32))) || (int)fR.result(32) == 0) {
+            if (fFB.getFfbSize().getEffectType() == "Constant") {
+                if (fFB.getFfbSize().getDirection() > 100)
+                    ffbStrength = (int)((fFB.getFfbSize().getMagnitude()) * (sw.elapsedMilliseconds() * 0.001));
+                else
+                    ffbStrength = (int)(-(fFB.getFfbSize().getMagnitude()) * (sw.elapsedMilliseconds() * 0.001));
+            }
+            if (fFB.getFfbSize().getEffectType() == "Period")
+                ffbStrength = (int)((fFB.getFfbSize().getOffset() * 0.5) * (sw.elapsedMilliseconds() * 0.001));
+            if (fR.result(21) == 1) {
+                axisX += ffbStrength;
+                ffbStrength = 0;
+            }
         }
         if (rInput.isAlphabeticKeyDown((int)fR.result(10)) && !lisButton1Clicked && gear < 7) {
             lisButton1Clicked = true;
@@ -784,7 +789,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 			if (rInput.isMouseWheelUp() && axisY <= 32767) axisY += 32767 / (int)fR.result(23);
 			if (rInput.isMouseWheelDown() && axisY > 0) axisY -= 32767 / (int)fR.result(23);
 		}
-		mTV.mouseLogic(rInput, axisX, fR.result(0), fR.result(20), (int)fR.result(16), isButton1Clicked, isButton2Clicked, (int)fR.result(22));
+		mTV.mouseLogic(rInput.getMouseChangeX(), axisX, fR.result(0), fR.result(20), (int)fR.result(16));
 		break;
 	case WM_CLOSE:
 		PostQuitMessage(0);
