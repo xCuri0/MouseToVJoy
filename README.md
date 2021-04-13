@@ -21,6 +21,12 @@ Useful for racing games, created especially for Assetto Corsa to remove traction
 Some games I tested it with: Assetto Corsa, Live For Speed, Rfactor.
 
 ## Release History
+* 1.86
+    * ADD: RequireLocked
+    * ADD: ForceFeedbackKey
+    * FIX: Cursor hiding
+    * FIX: Starting multiple instances
+    * ADD: Reduced CPU usage to near zero
 * 1.85
 	* ADD: Using two fingers on touchpad
 	* ADD: Require ALT for mouse lock key
@@ -300,6 +306,13 @@ Percentage of touchpad X axis to start at.
 
 ## TouchpadYStartPercent
 Percentage of touchpad Y axis to start at.
+
+## RequireLocked
+Requires the mouse to be locked
+
+## ForceFeedbackKey
+When this key is held down enable force feedback. Requires ForceFeedback = 1
+Use 0 to disable and always use force feedback if it's enabled
 
 ## Meta
 
