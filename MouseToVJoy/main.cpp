@@ -649,7 +649,8 @@ void initializationCode() {
 void updateCode() {
 	Sleep(1);
 
-    if (((int)fR.result(31) != 0 && isCursorLocked) || (int)fR.result(31) == 0) {
+    bool enabled = ((int)fR.result(31) != 0 && isCursorLocked) || (int)fR.result(31) == 0;
+    if (enabled) {
         if (((int)fR.result(32) != 0 && rInput.isAlphabeticKeyDown((int)fR.result(32))) || (int)fR.result(32) == 0 && fR.result(21) == 1) {
             if (fFB.getFfbSize().getEffectType() == "Constant") {
                 if (fFB.getFfbSize().getDirection() > 100)
@@ -678,12 +679,11 @@ void updateCode() {
     }
     mTV.inputLogic(rInput, axisX, axisY, axisZ, axisRX, isButton1Clicked, isButton2Clicked, isButton3Clicked, fR.result(1), fR.result(2), fR.result(3), fR.result(4), fR.result(5), fR.result(6), (int)fR.result(7), (int)fR.result(8), (int)fR.result(9), (int)fR.result(10), (int)fR.result(11), (int)fR.result(12), (int)fR.result(13), (int)fR.result(14), (int)fR.result(15), fR.result(17), fR.result(18), fR.result(19), ((int)fR.result(22) && !(int)fR.result(23)) || (!(int)fR.result(22) && !(int)fR.result(23)), touchpad, sw.elapsedMilliseconds(), (int)fR.result(31), isCursorLocked, wc.hInstance);
 
-    if (((int)fR.result(31) != 0 && isCursorLocked) || (int)fR.result(31) == 0) {
+    if (enabled) {
         vJ.feedDevice(1, axisX, axisY, axisZ, axisRX, gear, isButton1Clicked, isButton2Clicked, isButton3Clicked);
         isButton1Clicked = false;
         isButton2Clicked = false;
     }
-
 }
 BOOL HandleTouchpad(LPARAM* lParam) {
     if (!touchpad)
