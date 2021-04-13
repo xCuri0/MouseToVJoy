@@ -573,14 +573,17 @@ void initializationCode() {
 	vJ.testDriver();//Test if driver is installed and compatible.
 	vJ.testVirtualDevices(DEV_ID);//Test if virtually created joystick is up and running.
 	vJ.accuireDevice(DEV_ID);//Accuire virtual joystick of index number DEV_ID
-	vJ.enableFFB(DEV_ID);//Enable virtual joystick of index number DEV_ID to accept forcefeedback calls
-	FfbRegisterGenCB(FFBCALLBACK, &DEV_ID);//Registed what function to run on forcefeedback call.
 	SetConsoleCtrlHandler((PHANDLER_ROUTINE)(exitHandler), TRUE);//Set the exit handler
 	string configFileName = "config.txt";
 	//what strings to look for in config file.
 	string checkArray[33] = { "Sensitivity", "AttackTimeThrottle", "ReleaseTimeThrottle", "AttackTimeBreak", "ReleaseTimeBreak", "AttackTimeClutch", "ReleaseTimeClutch", "ThrottleKey", "BreakKey", "ClutchKey", "GearShiftUpKey", "GearShiftDownKey", "HandBrakeKey", "MouseLockKey", "MouseCenterKey", "UseMouse","UseCenterReduction" , "AccelerationThrottle", "AccelerationBreak", "AccelerationClutch", "CenterMultiplier", "UseForceFeedback", "UseWheelAsShifter", "UseWheelAsThrottle", "Touchpad", "TouchpadXInvert", "TouchpadYInvert", "TouchpadXPercent", "TouchpadYPercent", "TouchpadXStartPercent", "TouchpadYStartPercent", "RequireLocked", "ForceFeedbackKey"};
 	fR.newFile(configFileName, checkArray);//read configFileName and look for checkArray
-	for (int i = 7; i <= 14; i++)
+
+    if ((int)fR.result(21)) {
+        vJ.enableFFB(DEV_ID);//Enable virtual joystick of index number DEV_ID to accept forcefeedback calls
+        FfbRegisterGenCB(FFBCALLBACK, &DEV_ID);//Registed what function to run on forcefeedback call.
+    }
+    for (int i = 7; i <= 14; i++)
 		if ((int)fR.result(i) == 17) {
 			printf("Using global keyboard hook to disable Assetto Corsa keyboard shortcuts\n");
 			SetWindowsHookEx(WH_KEYBOARD_LL, keyboardHook, wc.hInstance, 0);
@@ -643,7 +646,7 @@ void updateCode() {
 	Sleep(1);
 
     if (((int)fR.result(31) != 0 && isCursorLocked) || (int)fR.result(31) == 0) {
-        if (((int)fR.result(32) != 0 && rInput.isAlphabeticKeyDown((int)fR.result(32))) || (int)fR.result(32) == 0) {
+        if (((int)fR.result(32) != 0 && rInput.isAlphabeticKeyDown((int)fR.result(32))) || (int)fR.result(32) == 0 && fR.result(21) == 1) {
             if (fFB.getFfbSize().getEffectType() == "Constant") {
                 if (fFB.getFfbSize().getDirection() > 100)
                     ffbStrength = (int)((fFB.getFfbSize().getMagnitude()) * (sw.elapsedMilliseconds() * 0.001));
@@ -652,10 +655,9 @@ void updateCode() {
             }
             if (fFB.getFfbSize().getEffectType() == "Period")
                 ffbStrength = (int)((fFB.getFfbSize().getOffset() * 0.5) * (sw.elapsedMilliseconds() * 0.001));
-            if (fR.result(21) == 1) {
-                axisX += ffbStrength;
-                ffbStrength = 0;
-            }
+
+            axisX += ffbStrength;
+            ffbStrength = 0;
         }
         if (rInput.isAlphabeticKeyDown((int)fR.result(10)) && !lisButton1Clicked && gear < 7) {
             lisButton1Clicked = true;
