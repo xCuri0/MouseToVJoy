@@ -29,6 +29,8 @@ TouchpadXStartPercent = 20
 TouchpadYStartPercent = 30
 TouchpadXPercent = 100
 TouchpadYPercent = 100
+RequireLocked = 0
+ForceFeedbackKey = 0
 
 Use keycodes from 0 TO 165
 http://keycode.info
