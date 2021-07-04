@@ -1,3 +1,4 @@
+#define _WINSOCKAPI_
 #include <windows.h>
 #include <iostream>
 #include <stdio.h>
@@ -15,6 +16,8 @@
 #include <hidsdi.h>
 #include <hidusage.h>
 #include <optional>
+#include <WinSock2.h>
+#include <iphlpapi.h>
 
 #define HID_USAGE_DIGITIZER_CONTACT_ID 0x51
 #define HID_USAGE_DIGITIZER_CONTACT_COUNT 0x54
@@ -34,8 +37,11 @@ FileRead fR;//Class used for reading and writing to config.txt file.
 ForceFeedBack fFB;//Used to recive and interpret ForceFeedback calls from game window.
 Stopwatch sw;//Measuring time in nanoseconds
 INT axisX, axisY, axisZ, axisRX, gear, pgear, ffbStrength; //Local variables that stores all axis values and forcefeedback strength we need.
-BOOL isButton1Clicked, isButton2Clicked, isButton3Clicked, lisButton1Clicked, lisButton2Clicked, ctrlDown, touchpad; //Bools that stores information if button was pressed.
+BOOL isButton1Clicked, isButton2Clicked, isButton3Clicked, lisButton1Clicked, lisButton2Clicked, ctrlDown, touchpad, ptouchpad; //Bools that stores information if button was pressed.
 RECT bounds = { -1, -1, -1, -1 };
+struct sockaddr_in udpaddr;
+SOCKET udpsocket;
+WSAPOLLFD fdarray = { 0 };
 double xpmul, ypmul;
 //Gets if the Cursor is locked then, sets cursor in cords 0,0 every input.
 BOOL isCursorLocked;
@@ -52,6 +58,29 @@ struct contact
 	contact_info info;
 	ULONG id;
 	POINT point;
+};
+
+#pragma pack(1)
+struct udptouch {
+    char slot;
+    float x;
+    float y;
+    char type;
+};
+
+#pragma pack(1)
+struct udptouchpad
+{
+    char count;
+    udptouch touch[10];
+};
+
+#pragma pack(1)
+struct udptouchpadinfo
+{
+    uint32_t right;
+    uint32_t top;
+    char device[128];
 };
 
 // Wrapper for malloc with unique_ptr semantics, to allow
@@ -74,6 +103,9 @@ static std::unordered_map<HANDLE, device_info> g_devices;
 
 // Holds the current primary touch point ID
 static thread_local ULONG t_primaryContactID;
+
+// touchpad app contacts
+std::vector<contact> contacts;
 
 // Allocates a malloc_ptr with the given size. The size must be
 // greater than or equal to sizeof(T).
@@ -509,6 +541,46 @@ BOOL HasPrecisionTouchpad() {
     }
     return false;
 }
+
+void HandleTouchpad(std::vector<contact> contacts) {
+    double _axisZ, _axisRX, x, y, ystart, xstart;
+
+    if (contacts.empty()) {
+        axisZ = 0;
+        axisRX = 0;
+    }
+
+    axisRX = -1;
+    axisZ = -1;
+    ystart = (double)fR.result(29) / 100;
+    xstart = (double)fR.result(30) / 100;
+    for (const contact& contact : contacts) {
+        x = ((double)contact.point.x - bounds.left) / ((double)bounds.right - bounds.left);
+        y = ((double)contact.point.y - bounds.top) / ((double)bounds.bottom - bounds.top);
+
+        if ((int)fR.result(25))
+            _axisZ = (INT)round(((1 - x) * xpmul) * 32767);
+        else
+            _axisZ = (INT)round((x * xpmul) * 32767);
+        if ((int)fR.result(26))
+            _axisRX = (INT)round(((1 - y) * ypmul) * 32767);
+        else
+            _axisRX = (INT)round((y * ypmul) * 32767);
+
+        if (_axisRX > (32767 * xstart) && axisRX == -1)
+            axisRX = int((_axisRX - (32767 * xstart)) / (1 - xstart));
+
+        if (_axisZ > (32767 * ystart) && axisZ == -1)
+            axisZ = (int)((_axisZ - (32767 * ystart)) / (1 - ystart));
+
+    }
+
+    if (axisRX == -1)
+        axisRX = 0;
+    if (axisZ == -1)
+        axisZ = 0;
+}
+
 void WriteCalibration() {
     std::ofstream calib;
     calib.open("tpcalib.dat");
@@ -566,6 +638,85 @@ void HandleCalibration(LONG x, LONG y) {
         WriteCalibration();
     }
 }
+
+// Locate USB tethering touchpad and connect to it
+void TouchpadConnect() {
+    /* Declare and initialize variables */
+    DWORD dwRetVal = 0;
+
+    // Set the flags to pass to GetAdaptersAddresses
+    ULONG flags = GAA_FLAG_INCLUDE_PREFIX | GAA_FLAG_INCLUDE_GATEWAYS;
+
+    // default to unspecified address family (both)
+    ULONG family = AF_UNSPEC;
+
+    PIP_ADAPTER_ADDRESSES pAddresses = NULL;
+    ULONG outBufLen = 0;
+    ULONG Iterations = 0;
+
+    PIP_ADAPTER_ADDRESSES pCurrAddresses = NULL;
+    bool found = false;
+    udptouchpadinfo touchinfo;
+
+    // Allocate a 15 KB buffer to start with.
+    outBufLen = 15000;
+
+    do {
+        pAddresses = (IP_ADAPTER_ADDRESSES*)malloc(outBufLen);
+        if (pAddresses == NULL) {
+            printf("Memory allocation failed for IP_ADAPTER_ADDRESSES struct\n");
+            exit(1);
+        }
+
+        dwRetVal = GetAdaptersAddresses(family, flags, NULL, pAddresses, &outBufLen);
+
+        if (dwRetVal == ERROR_BUFFER_OVERFLOW) {
+            free(pAddresses);
+            pAddresses = NULL;
+        }
+        else
+            break;
+
+        Iterations++;
+    } while ((dwRetVal == ERROR_BUFFER_OVERFLOW) && (Iterations < 3));
+
+
+    // If successful, output some information from the data we received
+    pCurrAddresses = pAddresses;
+    while (pCurrAddresses) {
+        PIP_ADAPTER_GATEWAY_ADDRESS pGatewayAddress = pCurrAddresses->FirstGatewayAddress;
+        if (pGatewayAddress && !wcscmp(pCurrAddresses->Description, L"Remote NDIS based Internet Sharing Device")) {
+            udpaddr.sin_addr = ((sockaddr_in*)pGatewayAddress->Address.lpSockaddr)->sin_addr;
+
+            found = true;
+        }
+        pCurrAddresses = pCurrAddresses->Next;
+    }
+
+    if (!found) {
+        printf("Failed to detect device. Is it plugged in with USB Tethering enabled?\n");
+        goto free;
+    }
+
+    const char b = 0;
+    sendto(udpsocket, &b, 1, 0, (const struct sockaddr*)&udpaddr, sizeof(struct sockaddr_in));
+
+    if (recv(udpsocket, (char*)&touchinfo, sizeof(udptouchpadinfo), 0) > 0) {
+        printf("Connected to %s\n", touchinfo.device);
+
+        bounds.top = touchinfo.top;
+        bounds.bottom = 0;
+        bounds.right = touchinfo.right;
+        bounds.left = 0;
+        touchpad = true;
+    } else
+        printf("Failed to connected to app. Is the touchpad app running?\n");
+
+free:
+    if (pAddresses) {
+        free(pAddresses);
+    }
+}
 //Code that is run once application is initialized, test virtual joystick and accuires it, also it reads config.txt file and prints out menu and variables.
 void initializationCode() {
 	//Code that is run only once, tests vjoy device, reads config file and prints basic out accuired vars.
@@ -578,9 +729,11 @@ void initializationCode() {
     }
 	vJ.accuireDevice(DEV_ID);//Accuire virtual joystick of index number DEV_ID
 	SetConsoleCtrlHandler((PHANDLER_ROUTINE)(exitHandler), TRUE);//Set the exit handler
-	string configFileName = "config.txt";
+    WSADATA wsaData;
+    u_long iMode = 1;
+    string configFileName = "config.txt";
 	//what strings to look for in config file.
-	string checkArray[33] = { "Sensitivity", "AttackTimeThrottle", "ReleaseTimeThrottle", "AttackTimeBreak", "ReleaseTimeBreak", "AttackTimeClutch", "ReleaseTimeClutch", "ThrottleKey", "BreakKey", "ClutchKey", "GearShiftUpKey", "GearShiftDownKey", "HandBrakeKey", "MouseLockKey", "MouseCenterKey", "UseMouse","UseCenterReduction" , "AccelerationThrottle", "AccelerationBreak", "AccelerationClutch", "CenterMultiplier", "UseForceFeedback", "UseWheelAsShifter", "UseWheelAsThrottle", "Touchpad", "TouchpadXInvert", "TouchpadYInvert", "TouchpadXPercent", "TouchpadYPercent", "TouchpadXStartPercent", "TouchpadYStartPercent", "RequireLocked", "ForceFeedbackKey"};
+	string checkArray[34] = { "Sensitivity", "AttackTimeThrottle", "ReleaseTimeThrottle", "AttackTimeBreak", "ReleaseTimeBreak", "AttackTimeClutch", "ReleaseTimeClutch", "ThrottleKey", "BreakKey", "ClutchKey", "GearShiftUpKey", "GearShiftDownKey", "HandBrakeKey", "MouseLockKey", "MouseCenterKey", "UseMouse","UseCenterReduction" , "AccelerationThrottle", "AccelerationBreak", "AccelerationClutch", "CenterMultiplier", "UseForceFeedback", "UseWheelAsShifter", "UseWheelAsThrottle", "Touchpad", "TouchpadXInvert", "TouchpadYInvert", "TouchpadXPercent", "TouchpadYPercent", "TouchpadXStartPercent", "TouchpadYStartPercent", "RequireLocked", "ForceFeedbackKey", "TouchpadApp" };
 	fR.newFile(configFileName, checkArray);//read configFileName and look for checkArray
 
     if ((int)fR.result(21)) {
@@ -596,6 +749,7 @@ void initializationCode() {
 	if (HasPrecisionTouchpad() && (int)fR.result(24)) {
 		printf("Found precision touchpad, using it for axis Z and RX\n");
         ReadCalibration();
+        ptouchpad = true;
 		touchpad = true;
         printf("Make sure your touchpad is set to disabled while mouse connected so it doesn't interfere with mouse input\n");
 	}
@@ -603,8 +757,32 @@ void initializationCode() {
 		printf("Could not find precision touchpad\n");
 	}
     else {
-        printf("Touchpad disabled\n");
+        printf("Precision touchpad disabled\n");
     }
+
+    if (fR.result(33)) {
+        // init sockets
+        if (WSAStartup(MAKEWORD(2, 2), &wsaData) < 0)
+            printf("WsaStartup error");
+        if ((udpsocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
+            printf("Creating socket failed");
+
+        memset(&udpaddr, 0, sizeof(udpaddr));
+        udpaddr.sin_family = AF_INET;
+        udpaddr.sin_port = htons(7270); // touchpad app socket
+
+        fdarray.fd = udpsocket;
+        fdarray.events = POLLRDNORM;
+
+        // latency fix
+        int a = 0;
+        setsockopt(udpsocket, SOL_SOCKET, SO_RCVBUF, (const char*)&a, sizeof(int));
+
+        // 10 second timeout
+        a = 10000;
+        setsockopt(udpsocket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&a, sizeof(int));
+    }
+
     xpmul = 1 / ((INT)fR.result(27) == 0 ? 1 : fR.result(27) / 100);
     ypmul = 1 / ((INT)fR.result(28) == 0 ? 1 : fR.result(28) / 100);
 	//Printing basic menu with assigned values
@@ -641,9 +819,13 @@ void initializationCode() {
     printf("Touchpad Y Start = %d \n", (INT)fR.result(30));
     printf("Touchpad X Percent = %.0f \n", (1 / xpmul) * 100);
     printf("Touchpad Y Percent = %.0f \n", (1 / ypmul) * 100);
+    printf("Touchpad App = %d \n", (int)fR.result(33));
 	printf("==================================\n");
 	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+
+    TouchpadConnect();
 }
+
 //Code that is run every time program gets an message from enviroment(mouse movement, mouse click etc.), manages input logic and feeding device.
 //Update code is sleeping for 1 miliseconds to make is less cpu demanding
 void updateCode() {
@@ -651,6 +833,42 @@ void updateCode() {
 
     bool enabled = ((int)fR.result(31) != 0 && isCursorLocked) || (int)fR.result(31) == 0;
     if (enabled) {
+        udptouchpad udptouches;
+
+        if (touchpad && !ptouchpad && fR.result(33) && WSAPoll(&fdarray, 1, 1) > 0) {
+            if (fdarray.revents & POLLRDNORM) {
+                if (recv(udpsocket, (char*)&udptouches, sizeof(udptouchpad), 0) > 0) {
+                    for (int i = 0; i < udptouches.count; i++)
+                    {
+                        int j = 0;
+                        for (const contact& contact : contacts) {
+                            if (contact.id == (ULONG)udptouches.touch[i].slot) {
+                                contacts.erase(contacts.begin() + j);
+                                continue;
+                            }
+                            j++;
+                        }
+
+                        if (udptouches.touch[i].type == 3) {
+                            continue;
+                        }
+                        else if (udptouches.touch[i].type == 4) {
+                            contacts.clear();
+                            continue;
+                        }
+                        else {
+                            contact tcontact = { };
+
+                            tcontact.id = udptouches.touch[i].slot;
+                            tcontact.point.x = (long)udptouches.touch[i].y;
+                            tcontact.point.y = (long)udptouches.touch[i].x;
+                            contacts.push_back(tcontact);
+                        }
+                    }
+                    HandleTouchpad(contacts);
+                }
+            }
+        }
         if (((int)fR.result(32) != 0 && rInput.isAlphabeticKeyDown((int)fR.result(32))) || (int)fR.result(32) == 0 && fR.result(21) == 1) {
             if (fFB.getFfbSize().getEffectType() == "Constant") {
                 if (fFB.getFfbSize().getDirection() > 100)
@@ -685,11 +903,11 @@ void updateCode() {
         isButton2Clicked = false;
     }
 }
-BOOL HandleTouchpad(LPARAM* lParam) {
-    if (!touchpad)
+
+BOOL HandlePrecisionTouchpad(LPARAM* lParam) {
+    if (!ptouchpad)
         return false;
 
-    double _axisZ, _axisRX, x, y, ystart, xstart;
     HRAWINPUT hInput = (HRAWINPUT)*lParam;
     RAWINPUTHEADER hdr = GetRawInputHeader(hInput);
     if (hdr.dwType != RIM_TYPEHID)
@@ -698,45 +916,12 @@ BOOL HandleTouchpad(LPARAM* lParam) {
     malloc_ptr<RAWINPUT> input = GetRawInput(hInput, hdr);
     std::vector<contact> contacts = GetContacts(dev, input.get());
 
-    if (contacts.empty()) {
-        axisZ = 0;
-        axisRX = 0;
-        return true;
-    }
-
     for (const contact& contact : contacts) {
         HandleCalibration(contact.point.x, contact.point.y);
     }
 
-    axisRX = -1;
-    axisZ = -1;
-    ystart = (double)fR.result(29) / 100;
-    xstart = (double)fR.result(30) / 100;
-    for (const contact& contact : contacts) {
-        x = ((double)contact.point.x - bounds.left) / ((double)bounds.right - bounds.left);
-        y = ((double)contact.point.y - bounds.top) / ((double)bounds.bottom - bounds.top);
+    HandleTouchpad(contacts);
 
-        if ((int)fR.result(25))
-            _axisZ = (INT)round(((1 - x) * xpmul) * 32767);
-        else
-            _axisZ = (INT)round((x * xpmul) * 32767);
-        if ((int)fR.result(26))
-            _axisRX = (INT)round(((1 - y) * ypmul) * 32767);
-        else
-            _axisRX = (INT)round((y * ypmul) * 32767);
-
-        if (_axisRX > (32767 * xstart) && axisRX == -1)
-            axisRX = int((_axisRX - (32767 * xstart)) / (1 - xstart));
-
-        if (_axisZ > (32767 * ystart) && axisZ == -1)
-            axisZ = (int)((_axisZ - (32767 * ystart)) / (1 - ystart));
-
-    }
-
-    if (axisRX == -1)
-        axisRX = 0;
-    if (axisZ == -1)
-        axisZ = 0;
     return true;
 }
 //Creates callback on window, registers raw input devices and processes mouse and keyboard input
@@ -766,9 +951,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_INPUT:
 		//When window recives input message get data for rinput device and run mouse logic function.
-        if (HandleTouchpad(&lParam))
+        if (HandlePrecisionTouchpad(&lParam))
             break;
-        rInput.getData(lParam, touchpad);
+        rInput.getData(lParam, ptouchpad);
         if ((int)fR.result(31) != 0 && !isCursorLocked)
             break;
 		if ((int)fR.result(22) && !(int)fR.result(23)) {
