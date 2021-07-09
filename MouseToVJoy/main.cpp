@@ -823,7 +823,8 @@ void initializationCode() {
 	printf("==================================\n");
 	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 
-    TouchpadConnect();
+    if (fR.result(33))
+        TouchpadConnect();
 }
 
 //Code that is run every time program gets an message from enviroment(mouse movement, mouse click etc.), manages input logic and feeding device.
