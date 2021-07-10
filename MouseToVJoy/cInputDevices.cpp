@@ -1,6 +1,6 @@
 #include "input.h"
 #include <iostream>
-void CInputDevices::getData(LPARAM lParam, bool touchpad)
+void CInputDevices::getData(LPARAM lParam, bool touchpad, int kInfo)
 {
 	// Determine how big the buffer should be
 	UINT bufferSize = 0;
@@ -28,11 +28,14 @@ void CInputDevices::getData(LPARAM lParam, bool touchpad)
 	_mouseXChange = raw->data.mouse.lLastX;
 	_mouseYChange = raw->data.mouse.lLastY;
 	_mouseZChange = (short)raw->data.mouse.usButtonData;
-	// Filter jumps that are caused by le funni number. why does this even happen ?
-	if (_mouseXChange == 6969)
-		_mouseXChange = 0;
-	if (_mouseYChange == 6969)
-		_mouseYChange = 0;
+
+	if (kInfo) {
+		// Filter jumps that are caused by le funni number. why does this even happen ?
+		if (_mouseXChange == kInfo)
+			_mouseXChange = 0;
+		if (_mouseYChange == kInfo)
+			_mouseYChange = 0;
+	}
 
 	if (_mouseZChange == 120)
 		_isMouseWheelUp = true;
@@ -134,7 +137,7 @@ void CInputDevices::getData(LPARAM lParam, bool touchpad)
 			}
 		}
 
-		if (pbToKey != NULL && raw->data.keyboard.ExtraInformation != 6969) // Check if ExtraInformation matches le funni number and ignore if it does
+		if (pbToKey != NULL && (!kInfo || raw->data.keyboard.ExtraInformation != (u_long)kInfo)) // Check if ExtraInformation matches le funni number and ignore if it does
 		{
 			*pbToKey = checkKeyPress(*pbToKey, keyUp);
 			// Be sure to return ASAP!

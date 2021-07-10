@@ -38,10 +38,10 @@ ForceFeedBack fFB;//Used to recive and interpret ForceFeedback calls from game w
 Stopwatch sw;//Measuring time in nanoseconds
 INT axisX, axisY, axisZ, axisRX, gear, pgear, ffbStrength; //Local variables that stores all axis values and forcefeedback strength we need.
 BOOL isButton1Clicked, isButton2Clicked, isButton3Clicked, lisButton1Clicked, lisButton2Clicked, ctrlDown, touchpad, ptouchpad; //Bools that stores information if button was pressed.
+u_long kInfo;
 RECT bounds = { -1, -1, -1, -1 };
 struct sockaddr_in udpaddr;
 SOCKET udpsocket;
-WSAPOLLFD fdarray = { 0 };
 double xpmul, ypmul;
 //Gets if the Cursor is locked then, sets cursor in cords 0,0 every input.
 BOOL isCursorLocked;
@@ -119,8 +119,8 @@ make_malloc(size_t size)
 	}
 	return malloc_ptr<T>(ptr);
 }
-
-void CALLBACK FFBCALLBACK(PVOID data, PVOID userData) {//Creating local callback which just executes callback from ForceFeedBack class.
+//Creating local callback which just executes callback from ForceFeedBack class.
+void CALLBACK FFBCALLBACK(PVOID data, PVOID userData) {
 	fFB.ffbToVJoy(data, userData);
 }
 LRESULT CALLBACK keyboardHook(int nCode, WPARAM wParam, LPARAM lParam) {
@@ -133,7 +133,7 @@ LRESULT CALLBACK keyboardHook(int nCode, WPARAM wParam, LPARAM lParam) {
         if (((int)fR.result(31) != 0 && isCursorLocked) || (int)fR.result(31) == 0) {
             PKBDLLHOOKSTRUCT p = (PKBDLLHOOKSTRUCT)(lParam);
             USHORT vkCode = MapVirtualKey(p->scanCode, MAPVK_VSC_TO_VK);
-            if (vkCode == 17 && p->dwExtraInfo != 6969) {
+            if (vkCode == 17 && p->dwExtraInfo != kInfo) {
                 ctrlDown = (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN);
                 for (int i = 7; i <= 14; i++) {
                     if ((rInput.isAlphabeticKeyDown((int)fR.result(i)) && (int)fR.result(i) != 17)) {
@@ -152,7 +152,7 @@ LRESULT CALLBACK keyboardHook(int nCode, WPARAM wParam, LPARAM lParam) {
             for (int i = 7; i <= 14; i++)
                 if ((int)fR.result(i) == vkCode && (int)fR.result(i) != 17 && (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) && ctrlDown) {
                     // Set the CTRL key to up and set dwExtraInfo to le funni number so we can ignore it
-                    keybd_event(17, 0, KEYEVENTF_KEYUP, 6969);
+                    keybd_event(17, 0, KEYEVENTF_KEYUP, kInfo);
                     break;
                 }
             break;
@@ -685,7 +685,7 @@ void TouchpadConnect() {
     pCurrAddresses = pAddresses;
     while (pCurrAddresses) {
         PIP_ADAPTER_GATEWAY_ADDRESS pGatewayAddress = pCurrAddresses->FirstGatewayAddress;
-        if (pGatewayAddress && !wcscmp(pCurrAddresses->Description, L"Remote NDIS based Internet Sharing Device")) {
+        if (pGatewayAddress && wcsstr(pCurrAddresses->Description, L"Remote NDIS based Internet Sharing Device")) {
             udpaddr.sin_addr = ((sockaddr_in*)pGatewayAddress->Address.lpSockaddr)->sin_addr;
 
             found = true;
@@ -698,7 +698,10 @@ void TouchpadConnect() {
         goto free;
     }
 
-    const char b = 0;
+    u_long a = 0;
+    ioctlsocket(udpsocket, FIONBIO, &a); // disable non blocking
+
+    const char b = (int)fR.result(33);
     sendto(udpsocket, &b, 1, 0, (const struct sockaddr*)&udpaddr, sizeof(struct sockaddr_in));
 
     if (recv(udpsocket, (char*)&touchinfo, sizeof(udptouchpadinfo), 0) > 0) {
@@ -716,6 +719,10 @@ free:
     if (pAddresses) {
         free(pAddresses);
     }
+
+    // enable non blocking
+    a = 1;
+    ioctlsocket(udpsocket, FIONBIO, &a);
 }
 //Code that is run once application is initialized, test virtual joystick and accuires it, also it reads config.txt file and prints out menu and variables.
 void initializationCode() {
@@ -743,6 +750,7 @@ void initializationCode() {
     for (int i = 7; i <= 14; i++)
 		if ((int)fR.result(i) == 17) {
 			printf("Using global keyboard hook to disable Assetto Corsa keyboard shortcuts\n");
+            kInfo = rand();
 			SetWindowsHookEx(WH_KEYBOARD_LL, keyboardHook, wc.hInstance, 0);
 			break;
 		}
@@ -770,9 +778,6 @@ void initializationCode() {
         memset(&udpaddr, 0, sizeof(udpaddr));
         udpaddr.sin_family = AF_INET;
         udpaddr.sin_port = htons(7270); // touchpad app socket
-
-        fdarray.fd = udpsocket;
-        fdarray.events = POLLRDNORM;
 
         // latency fix
         int a = 0;
@@ -836,8 +841,8 @@ void updateCode() {
     if (enabled) {
         udptouchpad udptouches;
 
-        if (touchpad && !ptouchpad && fR.result(33) && WSAPoll(&fdarray, 1, 1) > 0) {
-            if (fdarray.revents & POLLRDNORM) {
+        if (touchpad && !ptouchpad) {
+            if (true) {
                 if (recv(udpsocket, (char*)&udptouches, sizeof(udptouchpad), 0) > 0) {
                     for (int i = 0; i < udptouches.count; i++)
                     {
@@ -954,7 +959,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 		//When window recives input message get data for rinput device and run mouse logic function.
         if (HandlePrecisionTouchpad(&lParam))
             break;
-        rInput.getData(lParam, ptouchpad);
+        rInput.getData(lParam, ptouchpad, kInfo);
         if ((int)fR.result(31) != 0 && !isCursorLocked)
             break;
 		if ((int)fR.result(22) && !(int)fR.result(23)) {

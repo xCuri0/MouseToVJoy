@@ -28,7 +28,7 @@ public:
 	// Everytime your MsgProc's uMsg is WM_INPUT, you will want to call the GetData function.
 	// I believe this is smarter than calling it every frame in a game loop.
 
-	void getData(LPARAM lParam, bool touchpad);
+	void getData(LPARAM lParam, bool touchpad, int kInfo);
 	// This should be self-explanatory. Depending on which function
 	// you call, you will get true or false about the state of the mouse button.
 	// The code in the source file may be a bit difficult to follow,
