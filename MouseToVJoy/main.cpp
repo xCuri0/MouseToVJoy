@@ -1,4 +1,5 @@
 #define _WINSOCKAPI_
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include <windows.h>
 #include <iostream>
 #include <stdio.h>
@@ -712,6 +713,7 @@ void TouchpadConnect() {
         bounds.right = touchinfo.right;
         bounds.left = 0;
         touchpad = true;
+        WSAAsyncSelect(udpsocket, hwnd, 727, FD_READ);
     } else
         printf("Failed to connected to app. Is the touchpad app running?\n");
 
@@ -834,45 +836,41 @@ void initializationCode() {
 
 //Code that is run every time program gets an message from enviroment(mouse movement, mouse click etc.), manages input logic and feeding device.
 //Update code is sleeping for 1 miliseconds to make is less cpu demanding
-void updateCode() {
-	Sleep(1);
-
+inline void updateCode() {
     bool enabled = ((int)fR.result(31) != 0 && isCursorLocked) || (int)fR.result(31) == 0;
     if (enabled) {
         udptouchpad udptouches;
 
         if (touchpad && !ptouchpad) {
-            if (true) {
-                if (recv(udpsocket, (char*)&udptouches, sizeof(udptouchpad), 0) > 0) {
-                    for (int i = 0; i < udptouches.count; i++)
-                    {
-                        int j = 0;
-                        for (const contact& contact : contacts) {
-                            if (contact.id == (ULONG)udptouches.touch[i].slot) {
-                                contacts.erase(contacts.begin() + j);
-                                continue;
-                            }
-                            j++;
-                        }
-
-                        if (udptouches.touch[i].type == 3) {
+            if (recv(udpsocket, (char*)&udptouches, sizeof(udptouchpad), 0) > 0) {
+                for (int i = 0; i < udptouches.count; i++)
+                {
+                    int j = 0;
+                    for (const contact& contact : contacts) {
+                        if (contact.id == (ULONG)udptouches.touch[i].slot) {
+                            contacts.erase(contacts.begin() + j);
                             continue;
                         }
-                        else if (udptouches.touch[i].type == 4) {
-                            contacts.clear();
-                            continue;
-                        }
-                        else {
-                            contact tcontact = { };
-
-                            tcontact.id = udptouches.touch[i].slot;
-                            tcontact.point.x = (long)udptouches.touch[i].y;
-                            tcontact.point.y = (long)udptouches.touch[i].x;
-                            contacts.push_back(tcontact);
-                        }
+                        j++;
                     }
-                    HandleTouchpad(contacts);
+
+                    if (udptouches.touch[i].type == 3) {
+                        continue;
+                    }
+                    else if (udptouches.touch[i].type == 4) {
+                        contacts.clear();
+                        continue;
+                    }
+                    else {
+                        contact tcontact = { };
+
+                        tcontact.id = udptouches.touch[i].slot;
+                        tcontact.point.x = (long)udptouches.touch[i].y;
+                        tcontact.point.y = (long)udptouches.touch[i].x;
+                        contacts.push_back(tcontact);
+                    }
                 }
+                HandleTouchpad(contacts);
             }
         }
         if (((int)fR.result(32) != 0 && rInput.isAlphabeticKeyDown((int)fR.result(32))) || (int)fR.result(32) == 0 && fR.result(21) == 1) {
@@ -987,6 +985,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 			if (rInput.isMouseWheelDown() && axisY > 0) axisY -= 32767 / (int)fR.result(23);
 		}
 		mTV.mouseLogic(rInput.getMouseChangeX(), axisX, fR.result(0), fR.result(20), (int)fR.result(16));
+        [[fallthrough]];
+    case 727:
+        updateCode();
+        sw.stop();
+        sw.start();
 		break;
 	case WM_CLOSE:
 		PostQuitMessage(0);
@@ -1009,7 +1012,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	wc.hInstance = hInstance;
 	wc.lpszClassName = class_name;
 	if (RegisterClassEx(&wc))
-		CreateWindowEx(0, class_name, "dummy_name", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, NULL, NULL);
+		hwnd = CreateWindowEx(0, class_name, "dummy_name", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, NULL, NULL);
 
 	//Allocating console to process and redirect every stdout, stdin to it.
 	string cmdLine = lpCmdLine;
@@ -1025,24 +1028,16 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	ShowWindow(hwnd, nCmdShow);
 	UpdateWindow(hwnd);
 	initializationCode();
-	
 
-	//Loop on PeekMessage instead of GetMessage to avoid overflow.
-	while (true) {
-		sw.stop();
-		sw.start();
-		while (PeekMessage(&msgWindow, NULL, 0, 0, PM_REMOVE))
-		{
-			TranslateMessage(&msgWindow);
-			DispatchMessage(&msgWindow);
-		}
-		//To optimalize cpu usade wait 1 milisecond before running update code.
-		updateCode();
-		//If Message is equal to quit or destroy, break loop and end program.
-		if (msgWindow.message == WM_QUIT || msgWindow.message == WM_DESTROY)
-			break;
-	}
-		
+    while(GetMessage(&msgWindow, NULL, 0, 0))
+    {
+        TranslateMessage(&msgWindow);
+        DispatchMessage(&msgWindow);
+
+        //If Message is equal to quit or destroy, break loop and end program.
+        if (msgWindow.message == WM_QUIT || msgWindow.message == WM_DESTROY)
+            break;
+    }
 }
 
 
