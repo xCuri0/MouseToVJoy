@@ -961,7 +961,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam)
             break;
         rInput.getData(lParam, ptouchpad, kInfo);
         if ((int)fR.result(31) != 0 && !isCursorLocked)
-            break;
+            goto skip;
 		if ((int)fR.result(22) && !(int)fR.result(23)) {
 			if (rInput.isMouseWheelUp())isButton1Clicked = true;
 			if (rInput.isMouseWheelDown())isButton2Clicked = true;
@@ -989,6 +989,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 		mTV.mouseLogic(rInput.getMouseChangeX(), axisX, fR.result(0), fR.result(20), (int)fR.result(16));
         [[fallthrough]];
     case 727:
+    skip:
         updateCode();
         sw.stop();
         sw.start();
