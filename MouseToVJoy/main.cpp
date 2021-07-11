@@ -123,7 +123,9 @@ make_malloc(size_t size)
 //Creating local callback which just executes callback from ForceFeedBack class.
 void CALLBACK FFBCALLBACK(PVOID data, PVOID userData) {
 	fFB.ffbToVJoy(data, userData);
+    SendMessage(hwnd, 727, 0, 0);
 }
+
 LRESULT CALLBACK keyboardHook(int nCode, WPARAM wParam, LPARAM lParam) {
 	switch (wParam)
 	{
