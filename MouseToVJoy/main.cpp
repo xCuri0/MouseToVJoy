@@ -908,6 +908,8 @@ inline void updateCode() {
         isButton1Clicked = false;
         isButton2Clicked = false;
     }
+    sw.stop();
+    sw.start();
 }
 
 BOOL HandlePrecisionTouchpad(LPARAM* lParam) {
@@ -991,8 +993,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam)
     case 727:
     skip:
         updateCode();
-        sw.stop();
-        sw.start();
 		break;
 	case WM_CLOSE:
 		PostQuitMessage(0);

@@ -1,10 +1,10 @@
 Sensitivity = 6
-AttackTimeThrottle = 100
-ReleaseTimeThrottle = 100
-AttackTimeBreak = 100
-ReleaseTimeBreak = 100
-AttackTimeClutch = 200
-ReleaseTimeClutch = 200
+AttackTimeThrottle = 0
+ReleaseTimeThrottle = 0
+AttackTimeBreak = 0
+ReleaseTimeBreak = 0
+AttackTimeClutch = 0
+ReleaseTimeClutch = 0
 ThrottleKey = 87
 BreakKey = 69
 ClutchKey = 67
