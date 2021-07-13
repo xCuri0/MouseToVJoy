@@ -37,6 +37,7 @@ CInputDevices rInput;//Class that helps with determining what key was pressed.
 FileRead fR;//Class used for reading and writing to config.txt file.
 ForceFeedBack fFB;//Used to recive and interpret ForceFeedback calls from game window.
 Stopwatch sw;//Measuring time in nanoseconds
+Stopwatch timeout;
 INT axisX, axisY, axisZ, axisRX, gear, pgear, ffbStrength; //Local variables that stores all axis values and forcefeedback strength we need.
 BOOL isButton1Clicked, isButton2Clicked, isButton3Clicked, lisButton1Clicked, lisButton2Clicked, ctrlDown, touchpad, ptouchpad; //Bools that stores information if button was pressed.
 u_long kInfo;
@@ -698,6 +699,7 @@ void TouchpadConnect() {
 
     if (!found) {
         printf("Failed to detect device. Is it plugged in with USB Tethering enabled?\n");
+        Sleep(5000);
         goto free;
     }
 
@@ -715,10 +717,15 @@ void TouchpadConnect() {
         bounds.right = touchinfo.right;
         bounds.left = 0;
         touchpad = true;
+        timeout.stop();
+        timeout.start();
         WSAAsyncSelect(udpsocket, hwnd, 727, FD_READ);
-    } else
-        printf("Failed to connected to app. Is the touchpad app running?\n");
-
+    }
+    else {
+        printf("Failed to connect to app. Is the touchpad app running?\n");
+        Sleep(5000);
+    }
+    printf("Connected\n");
 free:
     if (pAddresses) {
         free(pAddresses);
@@ -787,8 +794,8 @@ void initializationCode() {
         int a = 0;
         setsockopt(udpsocket, SOL_SOCKET, SO_RCVBUF, (const char*)&a, sizeof(int));
 
-        // 10 second timeout
-        a = 10000;
+        // 1 second timeout
+        a = 1000;
         setsockopt(udpsocket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&a, sizeof(int));
     }
 
@@ -832,19 +839,26 @@ void initializationCode() {
 	printf("==================================\n");
 	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 
-    if (fR.result(33))
+    if (fR.result(33)) {
+        timeout.start();
         TouchpadConnect();
+    }
 }
 
 //Code that is run every time program gets an message from enviroment(mouse movement, mouse click etc.), manages input logic and feeding device.
 //Update code is sleeping for 1 miliseconds to make is less cpu demanding
 inline void updateCode() {
+    udptouchpad udptouches;
     bool enabled = ((int)fR.result(31) != 0 && isCursorLocked) || (int)fR.result(31) == 0;
-    if (enabled) {
-        udptouchpad udptouches;
 
-        if (touchpad && !ptouchpad) {
-            if (recv(udpsocket, (char*)&udptouches, sizeof(udptouchpad), 0) > 0) {
+    if (fR.result(33) && !ptouchpad) {
+        if (timeout.elapsedMilliseconds() > 6000) {
+            TouchpadConnect();
+        }
+        if (recv(udpsocket, (char*)&udptouches, sizeof(udptouchpad), 0) > 0) {
+            timeout.stop();
+            timeout.start();
+            if (enabled) {
                 for (int i = 0; i < udptouches.count; i++)
                 {
                     int j = 0;
@@ -875,6 +889,8 @@ inline void updateCode() {
                 HandleTouchpad(contacts);
             }
         }
+    }
+    if (enabled) {
         if (((int)fR.result(32) != 0 && rInput.isAlphabeticKeyDown((int)fR.result(32))) || (int)fR.result(32) == 0 && fR.result(21) == 1) {
             if (fFB.getFfbSize().getEffectType() == "Constant") {
                 if (fFB.getFfbSize().getDirection() > 100)
