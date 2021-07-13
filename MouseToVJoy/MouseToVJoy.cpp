@@ -5,6 +5,14 @@
 #define STEERING_MIN -16384
 //Function responsible for getting and modifying vars for throttle, break, clutch.
 void MouseToVjoy::inputLogic(CInputDevices input, INT &axisX, INT &axisY, INT &axisZ, INT &axisRX, BOOL &isButton1Clicked, BOOL &isButton2Clicked, BOOL &isButton3Clicked, DOUBLE attackTimeThrottle, DOUBLE releaseTimeThrottle, DOUBLE attackTimeBreak, DOUBLE releaseTimeBreak, DOUBLE attackTimeClutch, DOUBLE releaseTimeClutch, INT throttleKey, INT breakKey, INT clutchKey, INT gearShiftUpKey, INT gearShiftDownKey, INT handBrakeKey, INT mouseLockKey, INT mouseCenterKey, INT useMouse, DOUBLE accelerationThrottle, DOUBLE accelerationBreak, DOUBLE accelerationClutch, BOOL useWheelAsShifter, BOOL touchpad, DOUBLE deltaTime, BOOL requireLocked, BOOL &isCursorLocked, HINSTANCE hInstance) {
+	/* REMOVE WHEN ACCELERATION IS FIXED */
+	attackTimeThrottle = 0;
+	releaseTimeThrottle = 0;
+	attackTimeBreak = 0;
+	releaseTimeBreak = 0;
+	attackTimeClutch = 0;
+	releaseTimeClutch = 0;
+
 	if (input.isAlphabeticKeyDown(mouseLockKey) && input.isAlphabeticKeyDown(18) || hInstance == NULL) {
 		if (!isCursorLocked && !lastDown && hInstance != NULL) {
 			// Set cursor to blank but first save the current one so we can restore it.
